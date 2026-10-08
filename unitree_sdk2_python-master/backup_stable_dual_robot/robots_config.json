@@ -1,0 +1,18 @@
+[
+  {
+    "id": "robot1",
+    "name": "Robot 1 (Go2_46945)",
+    "ip": "192.168.0.41",
+    "fallback_ip": "192.168.12.1",
+    "key": "d15cda4ffb907236f7e363e77dfab121",
+    "enabled": true
+  },
+  {
+    "id": "robot2",
+    "name": "Robot 2 (Go2_48462)",
+    "ip": "192.168.0.75",
+    "fallback_ip": null,
+    "key": null,
+    "enabled": true
+  }
+]

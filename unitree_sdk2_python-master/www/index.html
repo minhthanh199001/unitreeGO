@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEHOANG ROBOTICS | Multi-Robot Swarm Control</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&family=Rajdhani:wght@500;700&display=swap');
+
+        :root {
+            --primary-glow: #00f0ff;
+            --secondary-glow: #ff003c;
+            --bg-color: #050505;
+            --glass-bg: rgba(16, 18, 27, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(255, 0, 60, 0.08), transparent 25%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        /* HEADER */
+        header {
+            width: 100%;
+            padding: 20px 40px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        header h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, var(--primary-glow), #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            color: #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .status-badge.disconnected {
+            background: rgba(255, 0, 60, 0.1);
+            border-color: rgba(255, 0, 60, 0.3);
+            color: #ff003c;
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.2);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #00ff00;
+            box-shadow: 0 0 8px #00ff00;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-badge.disconnected .status-dot {
+            background-color: #ff003c;
+            box-shadow: 0 0 8px #ff003c;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        /* MAIN LAYOUT */
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px 30px 40px;
+            max-width: 1550px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+            z-index: 10;
+        }
+
+        .cockpit-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+            width: 100%;
+        }
+
+        .cockpit-col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        @media (max-width: 1080px) {
+            .cockpit-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .voice-chip {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .voice-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            filter: brightness(1.25);
+        }
+
+        .voice-chip:active {
+            transform: scale(0.96);
+        }
+
+        /* CARDS */
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--primary-glow), transparent);
+            opacity: 0.5;
+        }
+
+        .card h2 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.5rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 8px;
+            background: var(--primary-glow);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        /* BUTTONS */
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            background: rgba(0, 240, 255, 0.15);
+            border-color: var(--primary-glow);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-danger {
+            background: rgba(255, 0, 60, 0.1);
+            border-color: rgba(255, 0, 60, 0.3);
+            color: #ff4a6e;
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 0, 60, 0.2);
+            border-color: var(--secondary-glow);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(255, 0, 60, 0.4);
+        }
+
+        .btn-full {
+            grid-column: span 2;
+        }
+
+        .btn-trick {
+            background: rgba(255, 215, 0, 0.06);
+            border: 1px solid rgba(255, 215, 0, 0.25);
+            color: #f8fafc;
+            padding: 12px 10px;
+            font-size: 0.88rem;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.25s ease;
+            text-transform: none;
+            font-weight: 500;
+        }
+
+        .btn-trick:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #ffd700;
+            color: #fff;
+            box-shadow: 0 0 16px rgba(255, 215, 0, 0.45);
+            transform: translateY(-2px);
+        }
+
+        .btn-trick:active {
+            transform: scale(0.95);
+        }
+
+        .speed-preset-btn {
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .speed-preset-btn.active {
+            background: rgba(0, 240, 255, 0.25) !important;
+            border-color: var(--primary-glow) !important;
+            color: #fff !important;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.5) !important;
+        }
+
+        .swarm-btn {
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .swarm-btn.active {
+            background: rgba(0, 240, 255, 0.3) !important;
+            border-color: var(--primary-glow) !important;
+            color: #fff !important;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.6) !important;
+        }
+
+        /* SLIDERS */
+        .slider-container {
+            margin-bottom: 20px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .slider-val {
+            color: var(--primary-glow);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: var(--primary-glow);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -8px;
+            box-shadow: 0 0 15px var(--primary-glow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 25px var(--primary-glow);
+        }
+
+        /* JOYSTICKS */
+        .joysticks-wrapper {
+            display: flex;
+            gap: 20px;
+            justify-content: space-around;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .joystick-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .joystick-label {
+            margin-bottom: 15px;
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .joystick-zone {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.05), rgba(0, 0, 0, 0.4));
+            border: 2px solid rgba(0, 240, 255, 0.15);
+            box-shadow: inset 0 0 30px rgba(0, 240, 255, 0.05), 0 0 20px rgba(0, 0, 0, 0.5);
+            touch-action: none;
+            user-select: none;
+            cursor: grab;
+        }
+        
+        /* Specific glow for turn joystick */
+        #joystick-turn {
+            background: radial-gradient(circle at 50% 50%, rgba(255, 0, 60, 0.05), rgba(0, 0, 0, 0.4));
+            border-color: rgba(255, 0, 60, 0.15);
+            box-shadow: inset 0 0 30px rgba(255, 0, 60, 0.05), 0 0 20px rgba(0, 0, 0, 0.5);
+            touch-action: none;
+            user-select: none;
+            cursor: grab;
+        }
+
+        /* Crosshairs in joysticks */
+        .joystick-zone::before, .joystick-zone::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            pointer-events: none; /* Không cản trở sự kiện kéo chuột */
+        }
+        .joystick-zone::before { top: 0; bottom: 0; left: 50%; width: 1px; transform: translateX(-50%); }
+        .joystick-zone::after { left: 0; right: 0; top: 50%; height: 1px; transform: translateY(-50%); }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                grid-template-columns: 1fr;
+            }
+            header {
+                padding: 15px 20px;
+            }
+            header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1>LEHOANG ROBOTICS</h1>
+            <div style="font-size: 0.8rem; color: var(--text-muted); letter-spacing: 1px; margin-top: 3px;">MULTI-ROBOT FLEET & SWARM CONTROLLER</div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <div id="robots-header-badges" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <!-- Tự động sinh badges cho từng robot -->
+            </div>
+            <button class="btn" onclick="openFleetModal()" style="padding: 10px 16px; font-size: 0.85rem; border-color: rgba(0, 240, 255, 0.4); color: var(--primary-glow); display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(0,240,255,0.15);">
+                ⚙️ QUẢN LÝ ĐỘI ROBOT
+            </button>
+            <button class="btn btn-danger" onclick="sendAction('stop')" style="padding: 10px 16px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;" title="Phanh dừng khẩn cấp toàn bộ robot">
+                🛑 PHANH DỪNG
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- MODULE: ROBOT SWARM SELECTION TOOLBAR -->
+        <div class="card" style="padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: rgba(0, 240, 255, 0.04); border-color: rgba(0, 240, 255, 0.25);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem;">🤖</span>
+                <div>
+                    <h3 style="font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; letter-spacing: 2px; color: var(--primary-glow); margin: 0;">
+                        CHẾ ĐỘ ĐIỀU KHIỂN ROBOT SWARM
+                    </h3>
+                    <div style="color: var(--text-muted); font-size: 0.8rem;">
+                        Chọn điều khiển đồng bộ tất cả robot hoặc bấm chọn riêng từng con
+                    </div>
+                </div>
+            </div>
+            <div id="swarm-selector-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn swarm-btn active" id="btn-target-all" onclick="setTargetRobot('all')">🔄 ĐỒNG BỘ TẤT CẢ ROBOT</button>
+            </div>
+        </div>
+
+        <!-- MAIN 2-COLUMN COCKPIT GRID -->
+        <div class="cockpit-grid">
+
+            <!-- ================= CỘT TRÁI: DI CHUYỂN & LỆNH CƠ BẢN ================= -->
+            <div class="cockpit-col">
+
+                <!-- 1. KINEMATIC CONTROL (Di chuyển & Tốc độ) -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                        <h2>Kinematic Control</h2>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <button class="btn speed-preset-btn" onclick="setSpeedPreset('slow', 0.45, 0.8)" id="btn-speed-slow">🐢 Chậm (0.45)</button>
+                            <button class="btn speed-preset-btn active" onclick="setSpeedPreset('normal', 0.9, 1.3)" id="btn-speed-normal">🐕 Vừa (0.90)</button>
+                            <button class="btn speed-preset-btn" onclick="setSpeedPreset('fast', 1.5, 2.0)" id="btn-speed-fast" style="border-color: rgba(255,0,60,0.5); color: #ff003c;">🚀 Nhanh (1.50)</button>
+                        </div>
+                    </div>
+
+                    <!-- Thanh trượt tốc độ gọn gàng -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                        <div class="slider-container" style="margin-bottom: 0;">
+                            <div class="slider-header" style="font-size: 0.78rem;">
+                                <span>Tốc độ di chuyển</span>
+                                <span class="slider-val" id="speed-max-val" style="font-size: 0.95rem;">0.90 m/s</span>
+                            </div>
+                            <input type="range" id="speed-slider" min="0.2" max="2.0" step="0.05" value="0.9" oninput="onSpeedSliderChange(this.value)">
+                        </div>
+                        <div class="slider-container" style="margin-bottom: 0;">
+                            <div class="slider-header" style="font-size: 0.78rem;">
+                                <span>Tốc độ quay đầu</span>
+                                <span class="slider-val" id="yaw-speed-max-val" style="font-size: 0.95rem;">1.30 rad/s</span>
+                            </div>
+                            <input type="range" id="yaw-slider" min="0.4" max="2.5" step="0.1" value="1.3" oninput="onYawSliderChange(this.value)">
+                        </div>
+                    </div>
+
+                    <!-- 2 Joysticks -->
+                    <div class="joysticks-wrapper" style="margin: 10px 0;">
+                        <div class="joystick-panel">
+                            <div class="joystick-label">Translation (Tiến / Lùi / Trái / Phải)</div>
+                            <div class="joystick-zone" id="joystick-move"></div>
+                        </div>
+                        <div class="joystick-panel">
+                            <div class="joystick-label">Rotation (Quay đầu Trái / Phải)</div>
+                            <div class="joystick-zone" id="joystick-turn"></div>
+                        </div>
+                    </div>
+
+                    <!-- Hướng dẫn phím bấm bàn phím máy tính -->
+                    <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                        <div style="background: rgba(255,255,255,0.04); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(0,240,255,0.25); font-size: 0.8rem; color: var(--primary-glow);">
+                            ⌨️ <b>W / S / A / D:</b> Di chuyển
+                        </div>
+                        <div style="background: rgba(255,255,255,0.04); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,0,60,0.25); font-size: 0.8rem; color: #ff4a6e;">
+                            ⌨️ <b>Q / E:</b> Xoay đầu
+                        </div>
+                        <div style="background: rgba(255,255,255,0.04); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(0,255,100,0.25); font-size: 0.8rem; color: #00ff66;">
+                            ⚡ <b>Shift:</b> Turbo x1.4
+                        </div>
+                        <div style="background: rgba(255,255,255,0.04); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,215,0,0.25); font-size: 0.8rem; color: #ffd700;">
+                            ⌨️ <b>Space:</b> Phanh dừng
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. COMMAND CORE (Hành động cơ bản & Phanh khẩn cấp) -->
+                <div class="card">
+                    <h2>Command Core</h2>
+                    <div class="buttons-grid" style="margin-bottom: 12px;">
+                        <button class="btn" onclick="sendAction('stand_up')" style="border-color: rgba(0, 240, 255, 0.3);">🟢 Stand Up (Đứng Dậy)</button>
+                        <button class="btn" onclick="sendAction('stand_down')" style="border-color: rgba(255, 215, 0, 0.3);">🟡 Sit Down (Ngồi Xuống)</button>
+                        <button class="btn" onclick="sendAction('balance')">🔵 Balance Stand (Thăng Bằng)</button>
+                        <button class="btn" onclick="sendAction('recovery')">🟠 Recovery Stand (Phục Hồi)</button>
+                        <button class="btn" onclick="sendAction('take_control')" style="font-size: 0.85rem; color: #cbd5e1;">🎮 Take Control (SDK)</button>
+                        <button class="btn" onclick="sendAction('release_control')" style="font-size: 0.85rem; color: #cbd5e1;">🔄 Release Control</button>
+                    </div>
+                    <button class="btn btn-danger btn-full" style="padding: 16px; font-size: 1.15rem; letter-spacing: 2px; width: 100%;" onclick="sendAction('stop')">
+                        🛑 EMERGENCY STOP (DỪNG KHẨN CẤP)
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ================= CỘT PHẢI: KỸ NĂNG BIỂU DIỄN & GIỌNG NÓI ================= -->
+            <div class="cockpit-col">
+
+                <!-- 3. TRICKS & PERFORMANCE (Kỹ năng biểu diễn phân loại trực quan) -->
+                <div class="card">
+                    <h2>Tricks & Performance</h2>
+                    
+                    <!-- Nhóm 1: Nhảy Múa -->
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 0.75rem; color: var(--primary-glow); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600;">
+                            💃 Nhảy Múa & Vũ Đạo
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                            <button class="btn btn-trick" onclick="sendAction('dance1')" title="Nhảy múa điệu 1">💃 Dance 1</button>
+                            <button class="btn btn-trick" onclick="sendAction('dance2')" title="Nhảy múa điệu 2">🕺 Dance 2</button>
+                            <button class="btn btn-trick" onclick="sendAction('moonwalk')" title="Đi lùi nghệ thuật">🕺 Moonwalk</button>
+                        </div>
+                    </div>
+
+                    <!-- Nhóm 2: Tương Tác & Thân Thiện -->
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 0.75rem; color: #ffd700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600;">
+                            🤝 Tương Tác & Thân Thiện
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                            <button class="btn btn-trick" onclick="sendAction('shake_hands')" title="Bắt tay bạn">🤝 Shake Hands</button>
+                            <button class="btn btn-trick" onclick="sendAction('greet')" title="Vẫy tay chào hỏi">👋 Greet</button>
+                            <button class="btn btn-trick" onclick="sendAction('heart')" title="Bắn tim ngộ nghĩnh">❤️ Finger Heart</button>
+                        </div>
+                    </div>
+
+                    <!-- Nhóm 3: Nhanh Nhẹn & Thao Diễn -->
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 0.75rem; color: #ff003c; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600;">
+                            🐅 Nhanh Nhẹn & Thao Diễn
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                            <button class="btn btn-trick" onclick="sendAction('pounce')" title="Vồ mồi chồm tới">🐅 Front Pounce</button>
+                            <button class="btn btn-trick" onclick="sendAction('jump_forward')" title="Nhảy về phía trước">🦘 Jump Forward</button>
+                            <button class="btn btn-trick" onclick="sendAction('front_flip')" title="Lộn nhào trước">🤸 Front Flip</button>
+                        </div>
+                    </div>
+
+                    <!-- Nhóm 4: Vận Động & Vui Nhộn -->
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 0.75rem; color: #00ff66; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600;">
+                            🐕 Vận Động & Vui Nhộn
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                            <button class="btn btn-trick" onclick="sendAction('stretch')" title="Vươn vai / Giãn cơ">🧘 Stretch</button>
+                            <button class="btn btn-trick" onclick="sendAction('wiggle_hips')" title="Lắc mông vui nhộn">🐕 Wiggle Hips</button>
+                            <button class="btn btn-trick" onclick="sendAction('scrape')" title="Cào chân bới đất">🐾 Scrape</button>
+                        </div>
+                    </div>
+
+                    <div id="trick-feedback" style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted); text-align: center; min-height: 20px; font-family: 'Rajdhani', sans-serif; letter-spacing: 1px;">
+                        // Bấm nút để robot biểu diễn động tác //
+                    </div>
+                </div>
+
+                <!-- 4. VOICE COMMAND (Điều khiển giọng nói tiếng Việt thông minh) -->
+                <div class="card" style="display: flex; flex-direction: column; align-items: center;">
+                    <h2>Voice Intelligence</h2>
+                    <button id="mic-btn" class="btn" style="width: 76px; height: 76px; border-radius: 50%; font-size: 2rem; margin-bottom: 10px; cursor: pointer;">🎤</button>
+                    <div id="voice-transcript" style="color: var(--primary-glow); font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; min-height: 28px; letter-spacing: 1px; text-align: center; margin-bottom: 14px;">
+                        Nhấn mic và nói tiếng Việt (hoặc bấm nhanh vào các câu lệnh dưới)
+                    </div>
+                    
+                    <!-- Danh sách câu lệnh mẫu dạng clickable chips -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.78rem;">
+                        <span class="voice-chip" onclick="executeVoiceChip('dance1', 'Nhảy múa')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">💃 "Nhảy múa"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('dance2', 'Nhảy điệu 2')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🕺 "Nhảy điệu 2"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('shake_hands', 'Bắt tay')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🤝 "Bắt tay"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('greet', 'Chào hỏi')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">👋 "Chào bạn"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('heart', 'Bắn tim')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">❤️ "Bắn tim"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('stretch', 'Vươn vai')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🧘 "Vươn vai"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('pounce', 'Vồ mồi')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🐅 "Vồ mồi"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('jump_forward', 'Nhảy tới')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🦘 "Nhảy tới"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('wiggle_hips', 'Lắc mông')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🐕 "Lắc mông"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('stand_up', 'Đứng lên')" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.3); padding: 4px 8px; border-radius: 6px; color: var(--primary-glow);">🧍 "Đứng lên"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('stand_down', 'Ngồi xuống')" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.3); padding: 4px 8px; border-radius: 6px; color: var(--primary-glow);">🧎 "Ngồi xuống"</span>
+                        <span class="voice-chip" onclick="executeVoiceChip('balance', 'Thăng bằng')" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.3); padding: 4px 8px; border-radius: 6px; color: var(--primary-glow);">⚖️ "Thăng bằng"</span>
+                        <span class="voice-chip" onclick="executeVoiceMove(0.4, 0, 0); document.getElementById('voice-transcript').innerText='Đã nhận lệnh: Tiến lên';" style="background: rgba(0,255,100,0.1); border: 1px solid rgba(0,255,100,0.3); padding: 4px 8px; border-radius: 6px; color: #00ff66;">🚀 "Tiến lên"</span>
+                        <span class="voice-chip" onclick="executeVoiceMove(-0.4, 0, 0); document.getElementById('voice-transcript').innerText='Đã nhận lệnh: Lùi lại';" style="background: rgba(0,255,100,0.1); border: 1px solid rgba(0,255,100,0.3); padding: 4px 8px; border-radius: 6px; color: #00ff66;">🔙 "Lùi lại"</span>
+                        <span class="voice-chip" onclick="sendAction('stop'); document.getElementById('voice-transcript').innerText='Đã nhận lệnh: Dừng lại';" style="background: rgba(255,0,60,0.1); border: 1px solid rgba(255,0,60,0.3); padding: 4px 8px; border-radius: 6px; color: #ff003c;">🛑 "Dừng lại"</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Setup WebSocket
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        let ws = new WebSocket(wsUrl);
+
+        function executeVoiceChip(actionCmd, label) {
+            const transcriptDiv = document.getElementById('voice-transcript');
+            if (transcriptDiv) {
+                transcriptDiv.innerText = `Đã bấm lệnh nhanh: "${label}"`;
+            }
+            sendAction(actionCmd);
+        }
+        let currentRobotsList = [];
+        let currentTargetMode = 'all';
+
+        function updateFleetUI(robots, target) {
+            if (!robots) return;
+            currentRobotsList = robots;
+            if (target) currentTargetMode = target;
+
+            // 1. Cập nhật Status Badges trên Header gọn gàng (Xanh: thành công, Đỏ: chưa kết nối)
+            const headerContainer = document.getElementById('robots-header-badges');
+            if (headerContainer) {
+                headerContainer.innerHTML = robots.map((r) => {
+                    const statusClass = r.connected ? '' : 'disconnected';
+                    const tooltip = `IP: ${r.ip} (${r.connected ? 'Đã kết nối' : 'Chưa kết nối'})`;
+                    return `
+                        <div class="status-badge ${statusClass}" title="${tooltip}">
+                            <div class="status-dot"></div>
+                            <span>${r.name}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // 2. Cập nhật các nút chọn Swarm Mode
+            const swarmContainer = document.getElementById('swarm-selector-buttons');
+            if (swarmContainer) {
+                const isAllActive = (currentTargetMode === 'all' || currentTargetMode === 'both') ? 'active' : '';
+                let buttonsHtml = `
+                    <button class="btn swarm-btn ${isAllActive}" id="btn-target-all" onclick="setTargetRobot('all')">
+                        🔄 ĐỒNG BỘ TẤT CẢ ROBOT (${robots.length})
+                    </button>
+                `;
+                robots.forEach((r, idx) => {
+                    const isActive = (currentTargetMode === r.id) ? 'active' : '';
+                    buttonsHtml += `
+                        <button class="btn swarm-btn ${isActive}" id="btn-target-${r.id}" onclick="setTargetRobot('${r.id}')">
+                            ${idx + 1}️⃣ CHỈ ${r.name.toUpperCase()}
+                        </button>
+                    `;
+                });
+                swarmContainer.innerHTML = buttonsHtml;
+            }
+
+            // 3. Nếu Modal Fleet đang mở -> Cập nhật danh sách trong Modal
+            renderModalRobotList();
+        }
+
+        function setTargetRobot(target) {
+            currentTargetMode = target;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "set_target", target: target }));
+            }
+            document.querySelectorAll('.swarm-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById('btn-target-' + target);
+            if (btn) btn.classList.add('active');
+        }
+
+        ws.onopen = () => {
+            console.log("Connected to WebSocket");
+        };
+        ws.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'multi_robot_status') {
+                    if (msg.robots) {
+                        updateFleetUI(msg.robots, msg.target);
+                    }
+                }
+            } catch (e) {}
+        };
+        ws.onclose = () => {
+            console.log("WebSocket disconnected. Reconnecting...");
+            setTimeout(() => { ws = new WebSocket(wsUrl); }, 1000);
+        };
+        ws.onerror = () => {};
+
+        function sendAction(cmd) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                console.log("Sending action:", cmd);
+                ws.send(JSON.stringify({ type: "action", cmd: cmd }));
+                const fb = document.getElementById('trick-feedback');
+                if (fb) {
+                    fb.style.color = '#ffd700';
+                    fb.innerText = `⚡ ĐÃ GỬI LỆNH ĐỘNG TÁC: ${cmd.toUpperCase()}`;
+                    setTimeout(() => {
+                        fb.style.color = 'var(--text-muted)';
+                        fb.innerText = '// Bấm nút để ra lệnh thực hiện động tác biểu diễn //';
+                    }, 3500);
+                }
+            }
+        }
+
+        let moveData = { vx: 0, vy: 0, vyaw: 0 };
+        let moveInterval = null;
+        
+        function sendMove() {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "move",
+                    vx: moveData.vx,
+                    vy: moveData.vy,
+                    vyaw: moveData.vyaw
+                }));
+            }
+        }
+
+        // Send move commands periodically while joystick is active
+        function startMoveLoop() {
+            if(!moveInterval) {
+                moveInterval = setInterval(sendMove, 50);
+            }
+        }
+
+        function stopMoveLoop() {
+            if(moveInterval) {
+                clearInterval(moveInterval);
+                moveInterval = null;
+            }
+        }
+
+        function updatePosture() {
+            const roll = parseFloat(document.getElementById('roll').value);
+            const pitch = parseFloat(document.getElementById('pitch').value);
+            const yaw = parseFloat(document.getElementById('yaw').value);
+            const height = parseFloat(document.getElementById('height').value);
+
+            document.getElementById('roll-val').innerText = roll.toFixed(2);
+            document.getElementById('pitch-val').innerText = pitch.toFixed(2);
+            document.getElementById('yaw-val').innerText = yaw.toFixed(2);
+            document.getElementById('height-val').innerText = height.toFixed(2);
+
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "posture",
+                    roll: roll,
+                    pitch: pitch,
+                    yaw: yaw,
+                    height: height
+                }));
+            }
+        }
+
+        function resetPosture() {
+            document.getElementById('roll').value = 0;
+            document.getElementById('pitch').value = 0;
+            document.getElementById('yaw').value = 0;
+            document.getElementById('height').value = 0;
+            updatePosture();
+        }
+
+        // Cấu hình tốc độ di chuyển
+        let currentMaxSpeed = 0.90; // m/s (mặc định)
+        let currentMaxYawSpeed = 1.30; // rad/s (mặc định)
+
+        function setSpeedPreset(mode, speed, yawSpeed) {
+            currentMaxSpeed = speed;
+            currentMaxYawSpeed = yawSpeed;
+            document.getElementById('speed-slider').value = speed;
+            document.getElementById('speed-max-val').innerText = speed.toFixed(2) + ' m/s';
+            document.getElementById('yaw-slider').value = yawSpeed;
+            document.getElementById('yaw-speed-max-val').innerText = yawSpeed.toFixed(2) + ' rad/s';
+
+            document.querySelectorAll('.speed-preset-btn').forEach(b => b.classList.remove('active'));
+            const activeBtn = document.getElementById('btn-speed-' + mode);
+            if (activeBtn) activeBtn.classList.add('active');
+            console.log(`Đã chọn mức tốc độ [${mode}]: ${speed} m/s, yaw: ${yawSpeed} rad/s`);
+        }
+
+        function onSpeedSliderChange(val) {
+            currentMaxSpeed = parseFloat(val);
+            document.getElementById('speed-max-val').innerText = currentMaxSpeed.toFixed(2) + ' m/s';
+            document.querySelectorAll('.speed-preset-btn').forEach(b => b.classList.remove('active'));
+        }
+
+        function onYawSliderChange(val) {
+            currentMaxYawSpeed = parseFloat(val);
+            document.getElementById('yaw-speed-max-val').innerText = currentMaxYawSpeed.toFixed(2) + ' rad/s';
+            document.querySelectorAll('.speed-preset-btn').forEach(b => b.classList.remove('active'));
+        }
+
+        // Bàn phím điều khiển (WASD & Phím mũi tên & Space & Shift Turbo)
+        const keysPressed = {};
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (['w', 'a', 's', 'd', 'q', 'e', 'shift', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) {
+                keysPressed[key] = true;
+                updateKeyboardMovement();
+                if (key === ' ') e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (keysPressed[key]) {
+                delete keysPressed[key];
+                updateKeyboardMovement();
+            }
+        });
+
+        function updateKeyboardMovement() {
+            let vx = 0;
+            let vy = 0;
+            let vyaw = 0;
+
+            // Kích hoạt Turbo Boost khi giữ phím Shift (1.4x tốc độ)
+            const isTurbo = !!keysPressed['shift'];
+            const multiplier = isTurbo ? 1.4 : 1.0;
+            const speed = currentMaxSpeed * multiplier;
+            const yawSpeed = currentMaxYawSpeed * multiplier;
+
+            if (keysPressed['w'] || keysPressed['arrowup']) vx += speed;
+            if (keysPressed['s'] || keysPressed['arrowdown']) vx -= (speed * 0.85); // lùi êm ái
+            if (keysPressed['a']) vy += (speed * 0.7);  // Go2: vy > 0 là sang trái
+            if (keysPressed['d']) vy -= (speed * 0.7);  // Go2: vy < 0 là sang phải
+            if (keysPressed['q'] || keysPressed['arrowleft']) vyaw += yawSpeed; // vyaw > 0 là quay trái
+            if (keysPressed['e'] || keysPressed['arrowright']) vyaw -= yawSpeed; // vyaw < 0 là quay phải
+
+            if (keysPressed[' ']) {
+                // Phanh dừng tức thì
+                vx = 0; vy = 0; vyaw = 0;
+            }
+
+            moveData.vx = vx;
+            moveData.vy = vy;
+            moveData.vyaw = vyaw;
+
+            if (vx !== 0 || vy !== 0 || vyaw !== 0) {
+                sendMove();
+                startMoveLoop();
+            } else {
+                stopMoveLoop();
+                sendMove();
+            }
+        }
+
+        // Movement Joystick (Translation X, Y)
+        const moveJoystick = nipplejs.create({
+            zone: document.getElementById('joystick-move'),
+            mode: 'static',
+            position: { left: '50%', top: '50%' },
+            color: '#00f0ff',
+            size: 120
+        });
+
+        moveJoystick.on('start', () => {
+            startMoveLoop();
+        });
+        
+        moveJoystick.on('move', (evt, data) => {
+            const force = Math.min(data.force, 2.0) / 2.0;
+            const angle = data.angle.radian;
+            
+            // Go2 coordinate:
+            // x: tiến (+), lùi (-) -> sin(angle)
+            // y: trái (+), phải (-) -> -cos(angle)
+            moveData.vx = force * currentMaxSpeed * Math.sin(angle);
+            moveData.vy = force * currentMaxSpeed * (-Math.cos(angle));
+            sendMove();
+        });
+
+        moveJoystick.on('end', () => {
+            stopMoveLoop();
+            moveData.vx = 0;
+            moveData.vy = 0;
+            sendMove(); // Send final 0
+        });
+
+        // Turn Joystick (Rotation Yaw)
+        const turnJoystick = nipplejs.create({
+            zone: document.getElementById('joystick-turn'),
+            mode: 'static',
+            position: { left: '50%', top: '50%' },
+            color: '#ff003c',
+            size: 120,
+            lockX: true
+        });
+
+        turnJoystick.on('start', () => {
+            startMoveLoop();
+        });
+
+        turnJoystick.on('move', (evt, data) => {
+            const force = Math.min(data.force, 2.0) / 2.0;
+            const angle = data.angle.radian;
+            
+            // Kéo trái (angle=PI) -> quay trái (+); kéo phải (angle=0) -> quay phải (-)
+            moveData.vyaw = force * currentMaxYawSpeed * (-Math.cos(angle));
+            sendMove();
+        });
+
+        turnJoystick.on('end', () => {
+            stopMoveLoop();
+            moveData.vyaw = 0;
+            sendMove(); // Send final 0
+        });
+
+        // -----------------------------------------------------
+        // VOICE CONTROL SYSTEM (WEB SPEECH API)
+        // -----------------------------------------------------
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'vi-VN'; // Nhận diện tiếng Việt
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            const micBtn = document.getElementById('mic-btn');
+            const transcriptDiv = document.getElementById('voice-transcript');
+            let isListening = false;
+            let voiceMoveTimeout = null;
+
+            micBtn.addEventListener('click', () => {
+                if (isListening) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+
+            recognition.onstart = () => {
+                isListening = true;
+                micBtn.style.backgroundColor = 'rgba(255, 0, 60, 0.3)';
+                micBtn.style.boxShadow = '0 0 20px rgba(255, 0, 60, 0.6)';
+                transcriptDiv.innerText = "Đang nghe...";
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                micBtn.style.backgroundColor = '';
+                micBtn.style.boxShadow = '';
+            };
+
+            // Hàm hỗ trợ chạy di chuyển bằng giọng nói trong 2 giây rồi tự dừng an toàn
+            function executeVoiceMove(vx, vy, vyaw, durationMs = 2000) {
+                // Ghi đè vào moveData hiện tại
+                moveData.vx = vx;
+                moveData.vy = vy;
+                moveData.vyaw = vyaw;
+                
+                startMoveLoop(); // Bắt đầu gửi lệnh liên tục
+
+                if (voiceMoveTimeout) clearTimeout(voiceMoveTimeout);
+                
+                voiceMoveTimeout = setTimeout(() => {
+                    moveData.vx = 0;
+                    moveData.vy = 0;
+                    moveData.vyaw = 0;
+                    sendMove();
+                    stopMoveLoop();
+                    transcriptDiv.innerText += " (Đã tự động dừng)";
+                }, durationMs);
+            }
+
+            recognition.onresult = (event) => {
+                const text = event.results[0][0].transcript.toLowerCase().trim();
+                transcriptDiv.innerText = `Đã nghe: "${text}"`;
+                console.log("Voice Command:", text);
+
+                // 1. DỪNG LẠI KHẨN CẤP
+                if (text.includes("dừng lại") || text.includes("dừng") || text.includes("stop") || text.includes("đứng yên") || text.includes("phanh")) {
+                    sendAction('stop');
+                    if (voiceMoveTimeout) clearTimeout(voiceMoveTimeout);
+                    moveData.vx = 0; moveData.vy = 0; moveData.vyaw = 0;
+                    sendMove();
+                    stopMoveLoop();
+                } 
+                // 2. CÁC HÀNH ĐỘNG CƠ BẢN
+                else if (text.includes("đứng lên") || text.includes("đứng dậy") || text.includes("đứng")) {
+                    sendAction('stand_up');
+                } else if (text.includes("ngồi xuống") || text.includes("ngồi") || text.includes("nằm xuống") || text.includes("nằm")) {
+                    sendAction('stand_down');
+                } else if (text.includes("chuẩn bị") || text.includes("thăng bằng") || text.includes("cân bằng")) {
+                    sendAction('balance');
+                } else if (text.includes("phục hồi") || text.includes("đứng lại")) {
+                    sendAction('recovery');
+                }
+                // 3. CÁC ĐỘNG TÁC BIỂU DIỄN & TRICKS MỚI
+                else if (text.includes("nhảy 2") || text.includes("điệu 2") || text.includes("dance 2")) {
+                    sendAction('dance2');
+                } else if (text.includes("nhảy múa") || text.includes("khiêu vũ") || text.includes("nhảy 1") || text.includes("nhảy") || text.includes("múa") || text.includes("dance")) {
+                    sendAction('dance1');
+                } else if (text.includes("vươn vai") || text.includes("giãn cơ") || text.includes("vươn mình") || text.includes("stretch")) {
+                    sendAction('stretch');
+                } else if (text.includes("bắt tay") || text.includes("cho tay") || text.includes("shake hand") || text.includes("shake hands")) {
+                    sendAction('shake_hands');
+                } else if (text.includes("chào") || text.includes("xin chào") || text.includes("chào hỏi") || text.includes("vẫy tay") || text.includes("vẫy chào") || text.includes("greet") || text.includes("hello") || text.includes("hi")) {
+                    sendAction('greet');
+                } else if (text.includes("vồ") || text.includes("vồ mồi") || text.includes("chồm") || text.includes("chồm tới") || text.includes("pounce")) {
+                    sendAction('pounce');
+                } else if (text.includes("nhảy tới") || text.includes("nhảy lên") || text.includes("nhảy về trước") || text.includes("nhảy xa") || text.includes("jump") || text.includes("jump forward")) {
+                    sendAction('jump_forward');
+                } else if (text.includes("bắn tim") || text.includes("thả tim") || text.includes("trái tim") || text.includes("heart") || text.includes("yêu")) {
+                    sendAction('heart');
+                } else if (text.includes("lắc mông") || text.includes("lắc hông") || text.includes("lắc đuôi") || text.includes("ngoáy mông") || text.includes("wiggle")) {
+                    sendAction('wiggle_hips');
+                } else if (text.includes("cào đất") || text.includes("bới đất") || text.includes("cào chân") || text.includes("scrape")) {
+                    sendAction('scrape');
+                } else if (text.includes("lộn nhào") || text.includes("nhào lộn") || text.includes("lộn trước") || text.includes("lộn") || text.includes("front flip") || text.includes("flip")) {
+                    sendAction('front_flip');
+                } else if (text.includes("moonwalk") || text.includes("moon walk") || text.includes("đi lùi nghệ thuật")) {
+                    sendAction('moonwalk');
+                }
+                // 4. DI CHUYỂN
+                else if (text.includes("tiến lên") || text.includes("tiến") || text.includes("đi tới") || text.includes("đi thẳng") || text.includes("chạy tới")) {
+                    executeVoiceMove(0.4, 0, 0);
+                } else if (text.includes("lùi lại") || text.includes("lùi") || text.includes("đi lùi") || text.includes("chạy lùi")) {
+                    executeVoiceMove(-0.4, 0, 0);
+                } else if (text.includes("bước sang trái") || text.includes("sang trái") || text.includes("đi sang trái")) {
+                    executeVoiceMove(0, 0.35, 0);
+                } else if (text.includes("bước sang phải") || text.includes("sang phải") || text.includes("đi sang phải")) {
+                    executeVoiceMove(0, -0.35, 0);
+                } else if (text.includes("quay trái") || text.includes("xoay trái")) {
+                    executeVoiceMove(0, 0, 0.6);
+                } else if (text.includes("quay phải") || text.includes("xoay phải")) {
+                    executeVoiceMove(0, 0, -0.6);
+                } else {
+                    transcriptDiv.innerText = `Không rõ lệnh: "${text}"`;
+                }
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'no-speech') {
+                    transcriptDiv.innerText = "Chưa nghe thấy gì, bạn nhấn mic và nói lại nhé.";
+                } else {
+                    transcriptDiv.innerText = `Lỗi Mic: ${event.error}`;
+                }
+                isListening = false;
+                micBtn.style.backgroundColor = '';
+                micBtn.style.boxShadow = '';
+            };
+        } else {
+            document.getElementById('voice-transcript').innerText = "Trình duyệt của bạn không hỗ trợ nhận diện giọng nói (Khuyên dùng Chrome/Edge).";
+        }
+
+        // -----------------------------------------------------
+        // FLEET MANAGEMENT MODAL FUNCTIONS
+        // -----------------------------------------------------
+        function openFleetModal() {
+            document.getElementById('fleet-modal').style.display = 'flex';
+            fetch('/api/robots')
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.robots) {
+                        currentRobotsList = data.robots;
+                        renderModalRobotList();
+                    }
+                })
+                .catch(e => console.error(e));
+        }
+
+        function closeFleetModal() {
+            document.getElementById('fleet-modal').style.display = 'none';
+        }
+
+        function renderModalRobotList() {
+            const listEl = document.getElementById('fleet-robot-list');
+            if (!listEl) return;
+            if (!currentRobotsList || currentRobotsList.length === 0) {
+                listEl.innerHTML = `<div style="color: var(--text-muted); font-size: 0.9rem;">Chưa có robot nào được thêm.</div>`;
+                return;
+            }
+            listEl.innerHTML = currentRobotsList.map(r => `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 12px 18px; border-radius: 10px; gap: 15px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${r.connected ? '#00f0ff' : '#ff003c'}; box-shadow: 0 0 10px ${r.connected ? '#00f0ff' : '#ff003c'};"></div>
+                        <div>
+                            <div style="font-weight: 600; color: #fff; font-size: 1rem;">${r.name}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">
+                                IP: ${r.ip} ${r.fallback_ip ? '| AP: ' + r.fallback_ip : ''} ${r.key ? '| AES Key: ✓' : '| Key: Edu/Legacy'}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn" onclick="toggleRobot('${r.id}')" style="padding: 6px 12px; font-size: 0.8rem; ${r.enabled ? 'border-color: #00f0ff; color: #00f0ff;' : 'border-color: #64748b; color: #64748b;'}">
+                            ${r.enabled ? '🟢 BẬT' : '⚪ TẮT'}
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteRobot('${r.id}')" style="padding: 6px 12px; font-size: 0.8rem;">
+                            🗑️ XÓA
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addNewRobot() {
+            const name = document.getElementById('new-robot-name').value.trim();
+            const ip = document.getElementById('new-robot-ip').value.trim();
+            const key = document.getElementById('new-robot-key').value.trim();
+            const fallback = document.getElementById('new-robot-fallback').value.trim();
+
+            if (!name || !ip) {
+                alert("Vui lòng nhập Tên Robot và Địa chỉ IP!");
+                return;
+            }
+
+            fetch('/api/robots', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    ip: ip,
+                    key: key || null,
+                    fallback_ip: fallback || null,
+                    enabled: true
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('new-robot-name').value = '';
+                document.getElementById('new-robot-ip').value = '';
+                document.getElementById('new-robot-key').value = '';
+                document.getElementById('new-robot-fallback').value = '';
+                // Reload list
+                openFleetModal();
+            })
+            .catch(err => {
+                alert("Lỗi khi thêm robot: " + err);
+            });
+        }
+
+        function toggleRobot(id) {
+            fetch(`/api/robots/${id}/toggle`, { method: 'POST' })
+                .then(r => r.json())
+                .then(() => openFleetModal())
+                .catch(e => console.error(e));
+        }
+
+        function deleteRobot(id) {
+            if (!confirm(`Bạn có chắc muốn xóa robot này khỏi hệ thống?`)) return;
+            fetch(`/api/robots/${id}`, { method: 'DELETE' })
+                .then(r => r.json())
+                .then(() => openFleetModal())
+                .catch(e => console.error(e));
+        }
+
+    </script>
+
+    <!-- MODAL: FLEET MANAGEMENT -->
+    <div id="fleet-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        <div class="card" style="width: 100%; max-width: 820px; max-height: 90vh; overflow-y: auto; background: rgba(10, 16, 30, 0.95); border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.9);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+                <h2 style="margin: 0; font-size: 1.4rem; color: var(--primary-glow);">⚙️ QUẢN LÝ ĐỘI ROBOT (FLEET MANAGER)</h2>
+                <button onclick="closeFleetModal()" style="background: none; border: none; color: #fff; font-size: 1.6rem; cursor: pointer; padding: 0 8px;">✕</button>
+            </div>
+
+            <!-- Bảng danh sách Robot hiện có -->
+            <h3 style="font-size: 0.95rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Danh sách Robot trong hệ thống:</h3>
+            <div id="fleet-robot-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">
+                <!-- Render động -->
+            </div>
+
+            <!-- Form thêm robot mới -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(0,240,255,0.25); border-radius: 12px; padding: 20px;">
+                <h3 style="font-size: 1.1rem; color: var(--primary-glow); margin-bottom: 14px; letter-spacing: 1px;">➕ THÊM ROBOT MỚI VÀO ỨNG DỤNG</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 18px;">
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Tên Gợi Nhớ *</label>
+                        <input type="text" id="new-robot-name" placeholder="VD: Robot 3 (Go2 Pro)" style="width: 100%; padding: 11px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Địa chỉ IP (Router LAN) *</label>
+                        <input type="text" id="new-robot-ip" placeholder="VD: 192.168.0.88" style="width: 100%; padding: 11px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Mã AES-128 Key (Nếu có)</label>
+                        <input type="text" id="new-robot-key" placeholder="Bỏ trống nếu là Go2 Edu" style="width: 100%; padding: 11px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">IP Dự Phòng AP (Tùy chọn)</label>
+                        <input type="text" id="new-robot-fallback" placeholder="VD: 192.168.12.1" style="width: 100%; padding: 11px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <button class="btn" onclick="addNewRobot()" style="background: rgba(0, 240, 255, 0.25); border-color: var(--primary-glow); color: #fff; padding: 12px 24px; font-size: 0.95rem;">
+                        + LƯU VÀ KẾT NỐI NGAY
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
