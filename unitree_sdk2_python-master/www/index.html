@@ -2,9 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="UnitreeGo">
+    <meta name="theme-color" content="#00f0ff">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <title>LEHOANG ROBOTICS | Multi-Robot Swarm Control</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&family=Rajdhani:wght@500;700&display=swap');
 
@@ -482,6 +490,9 @@
             <div id="robots-header-badges" style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <!-- Tự động sinh badges cho từng robot -->
             </div>
+            <button class="btn" onclick="openQrModal()" style="padding: 10px 16px; font-size: 0.85rem; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(56,189,248,0.2);" title="Mở trên điện thoại dạng WebApp bằng mã QR">
+                📱 ĐIỆN THOẠI (QR)
+            </button>
             <button class="btn" onclick="openFleetModal()" style="padding: 10px 16px; font-size: 0.85rem; border-color: rgba(0, 240, 255, 0.4); color: var(--primary-glow); display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(0,240,255,0.15);">
                 ⚙️ QUẢN LÝ ĐỘI ROBOT
             </button>
@@ -1235,7 +1246,85 @@
                 .catch(e => console.error(e));
         }
 
+        // ==========================================
+        // MOBILE WEBAPP (PWA) & QR CODE LOGIC
+        // ==========================================
+        let qrcodeInstance = null;
+
+        function openQrModal() {
+            const modal = document.getElementById('qr-modal');
+            modal.style.display = 'flex';
+
+            fetch('/api/lan_ip')
+                .then(r => r.json())
+                .then(data => {
+                    const mobileUrl = data.url || `http://${window.location.hostname}:8080`;
+                    document.getElementById('qr-direct-link').href = mobileUrl;
+                    document.getElementById('qr-direct-link').innerText = mobileUrl;
+
+                    const box = document.getElementById('qrcode-box');
+                    box.innerHTML = '';
+                    if (typeof QRCode !== 'undefined') {
+                        qrcodeInstance = new QRCode(box, {
+                            text: mobileUrl,
+                            width: 190,
+                            height: 190,
+                            colorDark: "#020617",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    }
+                })
+                .catch(() => {
+                    const fallbackUrl = window.location.href.split('?')[0];
+                    document.getElementById('qr-direct-link').href = fallbackUrl;
+                    document.getElementById('qr-direct-link').innerText = fallbackUrl;
+                });
+        }
+
+        function closeQrModal() {
+            document.getElementById('qr-modal').style.display = 'none';
+        }
+
+        // Đăng ký Service Worker để hỗ trợ cài đặt PWA WebApp
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => {
+                    console.log('SW registration note:', err);
+                });
+            });
+        }
+
     </script>
+
+    <!-- MODAL: MOBILE QR CODE & WEBAPP INSTRUCTIONS -->
+    <div id="qr-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        <div class="card" style="width: 100%; max-width: 480px; background: rgba(10, 16, 30, 0.96); border: 1px solid rgba(0, 240, 255, 0.5); box-shadow: 0 25px 60px rgba(0,0,0,0.9); text-align: center; padding: 26px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                <h2 style="margin: 0; font-size: 1.25rem; color: var(--primary-glow);">📱 KẾT NỐI ĐIỆN THOẠI (WEBAPP)</h2>
+                <button onclick="closeQrModal()" style="background: none; border: none; color: #fff; font-size: 1.6rem; cursor: pointer; padding: 0 8px;">✕</button>
+            </div>
+            
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+                Đảm bảo điện thoại của bạn đang kết nối <b>cùng mạng Wi-Fi</b> với máy tính này.
+            </p>
+
+            <div style="display: inline-block; background: #ffffff; padding: 14px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 0 25px rgba(0,240,255,0.35);">
+                <div id="qrcode-box" style="display: flex; justify-content: center;"></div>
+            </div>
+
+            <div style="background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px;">
+                <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 2px;">ĐƯỜNG DẪN TRỰC TIẾP</div>
+                <a id="qr-direct-link" href="#" target="_blank" style="color: var(--primary-glow); font-size: 1.1rem; font-weight: bold; text-decoration: none; word-break: break-all;"></a>
+            </div>
+
+            <div style="text-align: left; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px 14px; font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
+                <div style="font-weight: bold; color: #38bdf8; margin-bottom: 6px;">💡 Cài đặt thành Ứng dụng (Web App):</div>
+                <div>• <b>iPhone/iPad (Safari):</b> Bấm nút Chia sẻ (biểu tượng <span style="font-size:1rem">⬆️</span>) ➔ Chọn <b>"Thêm vào Màn hình chính" (Add to Home Screen)</b>.</div>
+                <div style="margin-top: 4px;">• <b>Android (Chrome):</b> Bấm menu <b>⋮</b> góc trên ➔ Chọn <b>"Cài đặt ứng dụng"</b> hoặc <b>"Thêm vào Màn hình chính"</b>.</div>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL: FLEET MANAGEMENT -->
     <div id="fleet-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">

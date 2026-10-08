@@ -87,9 +87,9 @@ class UnitreeLauncherApp:
 
         sub_lbl = tk.Label(
             title_box,
-            text=f"Địa chỉ Web: http://localhost:{PORT}  |  Mạng LAN: http://{self.lan_ip}:{PORT}",
-            font=("Segoe UI", 9),
-            fg="#94a3b8",
+            text=f"Máy tính: http://localhost:{PORT}  |  📱 Điện thoại (cùng Wi-Fi): http://{self.lan_ip}:{PORT}",
+            font=("Segoe UI", 9, "bold"),
+            fg="#38bdf8",
             bg="#1e293b"
         )
         sub_lbl.pack(anchor="w")
@@ -129,19 +129,35 @@ class UnitreeLauncherApp:
         # Nút Mở Web (To nhất, nổi bật nhất)
         self.btn_web = tk.Button(
             btn_bar,
-            text="🌐 MỞ TRÌNH DUYỆT ĐIỀU KHIỂN",
+            text="🌐 MỞ WEB ĐIỀU KHIỂN",
             font=("Segoe UI", 10, "bold"),
             bg="#0284c7",
             fg="white",
             activebackground="#0369a1",
             activeforeground="white",
             relief=tk.FLAT,
-            padx=14,
+            padx=12,
             pady=6,
             cursor="hand2",
             command=self.open_browser
         )
-        self.btn_web.pack(side=tk.LEFT, padx=(0, 8))
+        self.btn_web.pack(side=tk.LEFT, padx=(0, 6))
+
+        # Nút Mở Điện Thoại / QR
+        self.btn_mobile = tk.Button(
+            btn_bar,
+            text="📱 WebApp Điện Thoại",
+            font=("Segoe UI", 9, "bold"),
+            bg="#0891b2",
+            fg="white",
+            activebackground="#0e7490",
+            relief=tk.FLAT,
+            padx=10,
+            pady=6,
+            cursor="hand2",
+            command=self.show_mobile_info
+        )
+        self.btn_mobile.pack(side=tk.LEFT, padx=(0, 6))
 
         # Nút Khởi động lại
         self.btn_restart = tk.Button(
@@ -367,6 +383,21 @@ class UnitreeLauncherApp:
     def restart_server(self):
         self.stop_server()
         self.root.after(1200, lambda: self.start_server(open_browser_after=False))
+
+    def show_mobile_info(self):
+        mobile_url = f"http://{self.lan_ip}:{PORT}"
+        self.append_log(f"[{time.strftime('%H:%M:%S')}] Địa chỉ truy cập từ điện thoại: {mobile_url}\n", "info")
+        msg = (
+            f"📱 ĐỊA CHỈ TRUY CẬP TỪ ĐIỆN THOẠI:\n\n"
+            f"{mobile_url}\n\n"
+            f"1. Đảm bảo điện thoại kết nối CÙNG MẠNG WI-FI với máy tính.\n"
+            f"2. Mở trình duyệt trên điện thoại và nhập địa chỉ trên.\n"
+            f"3. Hoặc bấm '🌐 MỞ WEB ĐIỀU KHIỂN' trên máy tính rồi bấm nút '📱 ĐIỆN THOẠI (QR)' để quét camera vào ngay!\n\n"
+            f"💡 Mẹo PWA WebApp:\n"
+            f"- Trên iPhone: Bấm nút Chia sẻ ➔ 'Thêm vào Màn hình chính'.\n"
+            f"- Trên Android: Bấm menu 3 chấm ➔ 'Cài đặt ứng dụng'."
+        )
+        messagebox.showinfo("Kết Nối Điện Thoại (WebApp)", msg)
 
     def open_browser(self):
         url = f"http://localhost:{PORT}"

@@ -3,6 +3,7 @@ import os
 import time
 import math
 import random
+import socket
 import json
 import asyncio
 from typing import Optional, List, Dict, Any
@@ -380,6 +381,22 @@ async def toggle_robot(robot_id: str):
         await stop_robot_task(robot_id)
 
     return {"status": "ok", "enabled": r["enabled"]}
+
+def get_server_lan_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+@app.get("/api/lan_ip")
+async def get_lan_ip():
+    ip = get_server_lan_ip()
+    return {"ip": ip, "port": 8080, "url": f"http://{ip}:8080"}
 
 @app.on_event("startup")
 async def startup_event():
