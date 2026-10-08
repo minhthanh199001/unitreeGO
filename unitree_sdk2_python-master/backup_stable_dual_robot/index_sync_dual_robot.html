@@ -919,6 +919,9 @@
             <div id="robots-header-badges" style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <!-- Tự động sinh badges cho từng robot -->
             </div>
+            <button class="btn" onclick="openServerConfigModal()" style="padding: 10px 14px; font-size: 0.85rem; border-color: rgba(0, 240, 255, 0.4); color: var(--primary-glow); display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(0,240,255,0.15);" title="Cấu hình / Đổi IP máy chủ kết nối">
+                🌐 ĐỔI IP SERVER
+            </button>
             <button class="btn" onclick="openFleetModal()" style="padding: 10px 16px; font-size: 0.85rem; border-color: rgba(0, 240, 255, 0.4); color: var(--primary-glow); display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(0,240,255,0.15);">
                 ⚙️ QUẢN LÝ ĐỘI ROBOT
             </button>
@@ -944,8 +947,12 @@
                 </div>
             </div>
 
-            <!-- PHƯƠNG ÁN 1: ĐIỀU KHIỂN GIỌNG NÓI TRÊN THANH CÔNG CỤ (GÓC TRÊN BÊN PHẢI) -->
+            <!-- PHƯƠNG ÁN 1: ĐIỀU KHIỂN GIỌNG NÓI & NÚT ĐỔI IP TRÊN THANH CÔNG CỤ -->
             <div class="voice-toolbar-module" style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn voice-capsule-btn" onclick="openServerConfigModal()" style="padding: 5px 10px; font-size: 0.78rem; border-color: rgba(0,240,255,0.35); color: #00f0ff;" title="Đổi địa chỉ IP máy chủ kết nối">
+                    <span>🌐</span>
+                    <span>IP</span>
+                </button>
                 <button id="top-mic-btn" class="btn voice-capsule-btn" title="Bấm để nói tiếng Việt">
                     <span>🎤</span>
                     <span id="top-voice-label">GIỌNG NÓI</span>
@@ -1911,6 +1918,32 @@
             });
         }
 
+        function openServerConfigModal() {
+            if (window.AndroidApp && typeof window.AndroidApp.openServerSettings === 'function') {
+                window.AndroidApp.openServerSettings();
+                return;
+            }
+            const modal = document.getElementById('server-ip-modal');
+            if (modal) modal.style.display = 'flex';
+            const hostSpan = document.getElementById('current-server-host');
+            if (hostSpan) hostSpan.innerText = window.location.host;
+            const input = document.getElementById('custom-server-ip');
+            if (input) input.value = window.location.host;
+        }
+
+        function closeServerConfigModal() {
+            const modal = document.getElementById('server-ip-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function switchServerIp(newIp) {
+            if (!newIp) return;
+            let clean = newIp.trim();
+            if (!clean.includes(':')) clean += ':8080';
+            const protocol = window.location.protocol;
+            window.location.href = `${protocol}//${clean}`;
+        }
+
         // Đăng ký ServiceWorker cho Progressive Web App (PWA)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').then(reg => {
@@ -1920,6 +1953,45 @@
             });
         }
     </script>
+
+    <!-- MODAL: SERVER IP CONFIGURATION -->
+    <div id="server-ip-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        <div class="card" style="width: 100%; max-width: 520px; background: rgba(10, 16, 30, 0.98); border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.95); padding: 22px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                <h2 style="margin: 0; font-size: 1.25rem; color: var(--primary-glow);">🌐 CẤU HÌNH ĐỊA CHỈ IP SERVER</h2>
+                <button onclick="closeServerConfigModal()" style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; padding: 0 6px;">✕</button>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+                Máy chủ đang kết nối: <span id="current-server-host" style="color: #00ff66; font-weight: 700;"></span>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Nhập IP & Cổng kết nối mới:</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="custom-server-ip" placeholder="VD: 192.168.0.60:8080" style="flex: 1; padding: 11px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+                    <button class="btn" onclick="switchServerIp(document.getElementById('custom-server-ip').value)" style="padding: 11px 18px; font-size: 0.88rem; background: rgba(0,240,255,0.25); border-color: #00f0ff; color: #fff;">
+                        KẾT NỐI
+                    </button>
+                </div>
+            </div>
+            <div style="font-size: 0.78rem; color: #00f0ff; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">
+                Gợi ý IP mạng phổ biến (Chạm để kết nối ngay):
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <button class="btn" onclick="switchServerIp('192.168.0.60:8080')" style="text-align: left; padding: 10px 14px; font-size: 0.82rem; background: rgba(255,255,255,0.03); justify-content: flex-start;">
+                    🔗 192.168.0.60:8080 (IP Máy tính hiện tại)
+                </button>
+                <button class="btn" onclick="switchServerIp('192.168.0.153:8080')" style="text-align: left; padding: 10px 14px; font-size: 0.82rem; background: rgba(255,255,255,0.03); justify-content: flex-start;">
+                    🔗 192.168.0.153:8080 (IP Máy tính phụ)
+                </button>
+                <button class="btn" onclick="switchServerIp('192.168.12.1:8080')" style="text-align: left; padding: 10px 14px; font-size: 0.82rem; background: rgba(255,255,255,0.03); justify-content: flex-start;">
+                    🔗 192.168.12.1:8080 (Điểm phát AP Go2)
+                </button>
+                <button class="btn" onclick="switchServerIp('localhost:8080')" style="text-align: left; padding: 10px 14px; font-size: 0.82rem; background: rgba(255,255,255,0.03); justify-content: flex-start;">
+                    🔗 localhost:8080 (Cục bộ máy này)
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL: FLEET MANAGEMENT -->
     <div id="fleet-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
