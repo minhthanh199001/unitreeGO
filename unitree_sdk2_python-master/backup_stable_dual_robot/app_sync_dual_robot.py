@@ -399,6 +399,34 @@ async def toggle_robot(robot_id: str):
 
     return {"status": "ok", "enabled": r["enabled"]}
 
+class CloudLoginRequest(BaseModel):
+    email: str
+    password: str
+    region: Optional[str] = "global"
+
+@app.post("/api/cloud/fetch_robots")
+async def api_cloud_fetch_robots(req: CloudLoginRequest):
+    """Đăng nhập tài khoản Unitree Cloud của khách và tự động lấy danh sách Robot + AES-128 Key"""
+    try:
+        from unitree_webrtc_connect import UnitreeCloud
+        reg = req.region if req.region in ("global", "cn") else "global"
+        cloud = UnitreeCloud(region=reg, device_type="Go2")
+        cloud.login_email(req.email.strip(), req.password.strip())
+        devices = cloud.list_devices()
+        results = []
+        for dev in devices:
+            results.append({
+                "sn": dev.sn,
+                "name": dev.alias or f"Go2_{dev.sn[-5:] if len(dev.sn) >= 5 else dev.sn}",
+                "model": dev.model or dev.series or "Go2",
+                "online": bool(dev.online),
+                "key": dev.key or None,
+                "mac": dev.mac or None,
+            })
+        return {"status": "ok", "robots": results}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Lỗi đăng nhập Unitree Cloud: {str(e)}")
+
 SSL_CERT = os.path.join(os.path.dirname(__file__), "cert.pem")
 SSL_KEY = os.path.join(os.path.dirname(__file__), "key.pem")
 USE_SSL = os.path.exists(SSL_CERT) and os.path.exists(SSL_KEY)

@@ -1797,6 +1797,120 @@
                 .catch(e => console.error(e));
         }
 
+        function switchFleetTab(tab) {
+            const tabManual = document.getElementById('tab-btn-manual');
+            const tabCloud = document.getElementById('tab-btn-cloud');
+            const contentManual = document.getElementById('fleet-tab-manual');
+            const contentCloud = document.getElementById('fleet-tab-cloud');
+
+            if (tab === 'cloud') {
+                if (tabManual) tabManual.classList.remove('active');
+                if (tabCloud) tabCloud.classList.add('active');
+                if (contentManual) contentManual.style.display = 'none';
+                if (contentCloud) contentCloud.style.display = 'block';
+            } else {
+                if (tabManual) tabManual.classList.add('active');
+                if (tabCloud) tabCloud.classList.remove('active');
+                if (contentManual) contentManual.style.display = 'block';
+                if (contentCloud) contentCloud.style.display = 'none';
+            }
+        }
+
+        function fetchCloudRobots() {
+            const email = document.getElementById('cloud-email').value.trim();
+            const password = document.getElementById('cloud-password').value.trim();
+            const region = document.getElementById('cloud-region').value;
+            const btn = document.getElementById('btn-fetch-cloud');
+            const resultDiv = document.getElementById('cloud-robots-result');
+
+            if (!email || !password) {
+                alert("Vui lòng nhập Email và Mật khẩu tài khoản Unitree App!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "⏳ Đang kết nối Unitree Cloud...";
+            resultDiv.innerHTML = `<div style="color: #00f0ff; text-align: center; padding: 15px;">Đang kết nối tới máy chủ Unitree để quét danh sách robot...</div>`;
+
+            fetch('/api/cloud/fetch_robots', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password, region: region })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Đăng nhập thất bại"); });
+                return res.json();
+            })
+            .then(data => {
+                btn.disabled = false;
+                btn.innerText = "🔍 ĐĂNG NHẬP & TÌM ROBOT";
+                const robots = data.robots || [];
+                if (robots.length === 0) {
+                    resultDiv.innerHTML = `<div style="color: #ffd700; padding: 12px; text-align: center;">Tài khoản đăng nhập thành công nhưng chưa liên kết robot Go2 nào trên App Unitree!</div>`;
+                    return;
+                }
+
+                resultDiv.innerHTML = `
+                    <div style="color: #00ff66; font-weight: 700; margin-bottom: 10px;">✅ Tìm thấy ${robots.length} robot trong tài khoản Unitree:</div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        ${robots.map((r, idx) => `
+                            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(0,240,255,0.3); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                                <div>
+                                    <div style="font-weight: 700; color: #fff; font-size: 1rem;">🤖 ${r.name} (${r.model})</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">
+                                        SN: ${r.sn} | Trạng thái: ${r.online ? '🟢 Trực tuyến' : '⚪ Ngoại tuyến'}
+                                    </div>
+                                    <div style="font-size: 0.78rem; color: #00f0ff;">
+                                        🔑 AES Key: ${r.key ? r.key.substring(0, 10) + '...' + r.key.substring(22) + ' (Đã tự động lấy ✓)' : 'Bản Edu (Không cần key)'}
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="text" id="cloud-ip-${idx}" placeholder="IP Wi-Fi (VD: 192.168.0.41)" value="192.168.0.41" style="padding: 8px 12px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 0.85rem; width: 180px;">
+                                    <button class="btn" onclick="importCloudRobot('${r.sn}', '${r.name}', '${r.key || ''}', 'cloud-ip-${idx}')" style="background: rgba(0,240,255,0.25); border-color: #00f0ff; color: #fff; padding: 8px 14px; font-size: 0.82rem;">
+                                        + THÊM ROBOT NÀY
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerText = "🔍 ĐĂNG NHẬP & TÌM ROBOT";
+                resultDiv.innerHTML = `<div style="color: #ff003c; padding: 12px; text-align: center;">❌ ${err.message}</div>`;
+            });
+        }
+
+        function importCloudRobot(sn, name, key, ipInputId) {
+            const ipInput = document.getElementById(ipInputId);
+            const ip = ipInput ? ipInput.value.trim() : "";
+            if (!ip) {
+                alert("Vui lòng nhập địa chỉ IP Wi-Fi của robot!");
+                return;
+            }
+
+            fetch('/api/robots', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    ip: ip,
+                    key: key || null,
+                    fallback_ip: "192.168.12.1",
+                    enabled: true
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(`✅ Đã thêm robot "${name}" (${ip}) với mã khóa bảo mật thành công!`);
+                openFleetModal();
+            })
+            .catch(err => {
+                alert("Lỗi khi thêm robot: " + err);
+            });
+        }
+
         // Đăng ký ServiceWorker cho Progressive Web App (PWA)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').then(reg => {
@@ -1808,8 +1922,8 @@
     </script>
 
     <!-- MODAL: FLEET MANAGEMENT -->
-    <div id="fleet-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
-        <div class="card" style="width: 100%; max-width: 820px; max-height: 90vh; overflow-y: auto; background: rgba(10, 16, 30, 0.95); border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.9);">
+    <div id="fleet-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        <div class="card" style="width: 100%; max-width: 840px; max-height: 90vh; overflow-y: auto; background: rgba(10, 16, 30, 0.98); border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.95);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
                 <h2 style="margin: 0; font-size: 1.4rem; color: var(--primary-glow);">⚙️ QUẢN LÝ ĐỘI ROBOT (FLEET MANAGER)</h2>
                 <button onclick="closeFleetModal()" style="background: none; border: none; color: #fff; font-size: 1.6rem; cursor: pointer; padding: 0 8px;">✕</button>
@@ -1821,9 +1935,19 @@
                 <!-- Render động -->
             </div>
 
-            <!-- Form thêm robot mới -->
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(0,240,255,0.25); border-radius: 12px; padding: 20px;">
-                <h3 style="font-size: 1.1rem; color: var(--primary-glow); margin-bottom: 14px; letter-spacing: 1px;">➕ THÊM ROBOT MỚI VÀO ỨNG DỤNG</h3>
+            <!-- TABS LỰA CHỌN PHƯƠNG THỨC THÊM ROBOT -->
+            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <button id="tab-btn-manual" class="btn active" onclick="switchFleetTab('manual')" style="flex: 1; padding: 11px; font-size: 0.88rem;">
+                    ➕ THÊM THỦ CÔNG (IP / KEY)
+                </button>
+                <button id="tab-btn-cloud" class="btn" onclick="switchFleetTab('cloud')" style="flex: 1; padding: 11px; font-size: 0.88rem; border-color: rgba(255,215,0,0.5); color: #ffd700;">
+                    ☁️ TÀI KHOẢN UNITREE APP (TỰ LẤY KEY CHO KHÁCH)
+                </button>
+            </div>
+
+            <!-- TAB 1: FORM THÊM THỦ CÔNG -->
+            <div id="fleet-tab-manual" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(0,240,255,0.25); border-radius: 12px; padding: 20px;">
+                <h3 style="font-size: 1.05rem; color: var(--primary-glow); margin-bottom: 14px; letter-spacing: 1px;">➕ THÊM ROBOT QUA IP & MÃ KEY CÓ SẴN</h3>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 18px;">
                     <div>
                         <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Tên Gợi Nhớ *</label>
@@ -1847,6 +1971,37 @@
                         + LƯU VÀ KẾT NỐI NGAY
                     </button>
                 </div>
+            </div>
+
+            <!-- TAB 2: ĐỒNG BỘ TỪ TÀI KHOẢN UNITREE CLOUD -->
+            <div id="fleet-tab-cloud" style="display: none; background: rgba(255,215,0,0.03); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 20px;">
+                <h3 style="font-size: 1.05rem; color: #ffd700; margin-bottom: 8px; letter-spacing: 1px;">☁️ ĐĂNG NHẬP TÀI KHOẢN UNITREE APP ĐỂ TỰ LẤY ROBOT & KEY</h3>
+                <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">
+                    Dành cho khách hàng có robot mới hoặc dùng tài khoản Unitree khác. Hệ thống sẽ tự động trích xuất mã bảo mật AES-128 Key mà không cần nhập tay!
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Email Unitree App *</label>
+                        <input type="email" id="cloud-email" placeholder="VD: customer@gmail.com" style="width: 100%; padding: 11px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Mật khẩu Unitree App *</label>
+                        <input type="password" id="cloud-password" placeholder="Nhập mật khẩu App Unitree" style="width: 100%; padding: 11px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Khu Vực Máy Chủ</label>
+                        <select id="cloud-region" style="width: 100%; padding: 11px 14px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+                            <option value="global" selected>Quốc tế / Việt Nam (Global)</option>
+                            <option value="cn">Nội địa Trung Quốc (China)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                    <button class="btn" id="btn-fetch-cloud" onclick="fetchCloudRobots()" style="background: rgba(255,215,0,0.2); border-color: #ffd700; color: #ffd700; padding: 12px 24px; font-size: 0.95rem;">
+                        🔍 ĐĂNG NHẬP & TÌM ROBOT
+                    </button>
+                </div>
+                <div id="cloud-robots-result"></div>
             </div>
         </div>
     </div>

@@ -1,0 +1,14 @@
+# Unitree Go2 Swarm Controller Requirements
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+websockets>=13.0
+cryptography>=42.0.0
+pydantic>=2.7.0
+curl_cffi>=0.7.0
+unitree_webrtc_connect>=2.2.0
+pyee>=11.0.0
+aiortc>=1.9.0
+aioice>=0.9.0
+requests>=2.31.0
+numpy>=1.24.0
+opencv-python>=4.8.0
