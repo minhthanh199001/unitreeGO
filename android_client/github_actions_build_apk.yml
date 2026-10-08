@@ -1,0 +1,71 @@
+name: Đóng gói Android APK (LEHOANG ROBOTICS)
+
+on:
+  push:
+    paths:
+      - 'android_client/**'
+      - '.github/workflows/build_apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build APK Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kiểm tra mã nguồn (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Thiết lập môi trường Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cài đặt và cấp quyền Gradle Wrapper
+        working-directory: android_client
+        run: |
+          gradle wrapper
+          chmod +x gradlew
+
+      - name: Đóng gói ứng dụng Android APK
+        working-directory: android_client
+        run: |
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Đổi tên và chuẩn bị file APK
+        run: |
+          mkdir -p output_apk
+          cp android_client/app/build/outputs/apk/debug/app-debug.apk output_apk/LEHOANG_ROBOTICS_Go2.apk
+
+      - name: Tải file APK lên Artifacts (Lưu trữ tải về)
+        uses: actions/upload-artifact@v4
+        with:
+          name: LEHOANG_ROBOTICS_Go2_APK
+          path: output_apk/LEHOANG_ROBOTICS_Go2.apk
+
+      - name: Tự động phát hành bản Release APK tải trực tiếp
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0-apk
+          name: "Bản cài đặt Android APK (LEHOANG ROBOTICS)"
+          body: |
+            ## 📱 ỨNG DỤNG ĐIỀU KHIỂN ROBOT UNITREE GO2 (ANDROID APK)
+            
+            - **Tên app:** LEHOANG ROBOTICS
+            - **Định dạng:** Android APK cài đặt trực tiếp
+            - **Tính năng nổi bật:**
+              - 🚀 Khóa giao diện nằm ngang tuyệt đối (Kiosk landscape).
+              - ⚡ Toàn màn hình (Immersive Mode), không có thanh địa chỉ trình duyệt.
+              - 🔒 Tự động bỏ qua lỗi SSL tự ký nội bộ (không bao giờ hiện cảnh báo bảo mật).
+              - 🎤 Tự động cấp quyền Micro cho Web Speech API để ra lệnh giọng nói tiếng Việt.
+              - 🌐 Hỗ trợ cấu hình IP máy tính kết nối nhanh chóng.
+            
+            👉 **Tải file:** Nhấp vào `LEHOANG_ROBOTICS_Go2.apk` bên dưới để cài đặt trên điện thoại Android!
+          files: output_apk/LEHOANG_ROBOTICS_Go2.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
