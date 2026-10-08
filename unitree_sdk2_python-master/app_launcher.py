@@ -3,6 +3,7 @@ import sys
 import time
 import socket
 import json
+import queue
 import subprocess
 import threading
 import webbrowser
@@ -31,6 +32,11 @@ def get_lan_ip():
     except Exception:
         return "127.0.0.1"
 
+def is_port_open(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        return s.connect_ex(('127.0.0.1', port)) == 0
+
 def load_robots():
     if os.path.exists(CONFIG_FILE):
         try:
@@ -51,9 +57,13 @@ class UnitreeLauncherApp:
         self.server_process = None
         self.is_running = False
         self.lan_ip = get_lan_ip()
+        self.log_queue = queue.Queue()
 
         self.setup_ui()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # Định kỳ xử lý hàng đợi log từ luồng phụ
+        self.process_log_queue()
 
         # Tự động khởi động server và mở web khi bật app
         self.root.after(300, self.start_server_auto)
@@ -209,8 +219,8 @@ class UnitreeLauncherApp:
         ).pack(side=tk.LEFT)
 
         # Scrolled Text for Log
-        log_frame = tk.Frame(self.root, bg="#0f172a", padx=16, pady=(0, 12))
-        log_frame.pack(fill=tk.BOTH, expand=True)
+        log_frame = tk.Frame(self.root, bg="#0f172a", padx=16, pady=8)
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 8))
 
         self.log_area = scrolledtext.ScrolledText(
             log_frame,
@@ -231,6 +241,19 @@ class UnitreeLauncherApp:
         self.log_area.insert(tk.END, text, tag)
         self.log_area.see(tk.END)
 
+    def process_log_queue(self):
+        try:
+            while True:
+                item = self.log_queue.get_nowait()
+                if item == "__SERVER_STOPPED__":
+                    self.on_server_stopped()
+                else:
+                    line, tag = item
+                    self.append_log(line, tag)
+        except queue.Empty:
+            pass
+        self.root.after(50, self.process_log_queue)
+
     def set_status(self, text, fg_color, bg_color):
         self.status_badge.config(text=text, fg=fg_color, bg=bg_color)
 
@@ -241,12 +264,20 @@ class UnitreeLauncherApp:
         if self.is_running:
             return
 
+        # Kiểm tra xem cổng 8080 đã có tiến trình nào chạy chưa
+        if is_port_open(PORT):
+            self.is_running = True
+            self.set_status("● SERVER ĐANG CHẠY", "#4ade80", "#052e16")
+            self.append_log(f"[{time.strftime('%H:%M:%S')}] Cổng {PORT} đã có Server đang hoạt động sẵn sàng.\n", "success")
+            self.btn_stop.config(state=tk.NORMAL)
+            if open_browser_after:
+                self.root.after(500, self.open_browser)
+            return
+
         self.append_log(f"[{time.strftime('%H:%M:%S')}] Đang khởi động Unitree Go Web Server...\n", "info")
         self.set_status("● ĐANG KHỞI ĐỘNG...", "#facc15", "#422006")
 
         try:
-            # Chạy app.py trong subprocess
-            startupinfo = None
             creationflags = 0
             if sys.platform == "win32":
                 creationflags = subprocess.CREATE_NO_WINDOW
@@ -268,18 +299,22 @@ class UnitreeLauncherApp:
             self.set_status("● SERVER ĐANG CHẠY", "#4ade80", "#052e16")
             self.btn_stop.config(state=tk.NORMAL)
 
-            # Khởi tạo luồng đọc stdout
+            # Khởi tạo luồng đọc stdout an toàn qua queue
             t = threading.Thread(target=self.read_server_output, daemon=True)
             t.start()
 
             if open_browser_after:
-                self.root.after(1800, self.open_browser)
+                # Đợi server lên cổng rồi mở trình duyệt
+                self.root.after(1500, self.wait_and_open_browser)
 
         except Exception as e:
             self.is_running = False
             self.set_status("● LỖI KHỞI ĐỘNG", "#f87171", "#450a0a")
             self.append_log(f"Lỗi khởi động: {e}\n", "error")
             messagebox.showerror("Lỗi", f"Không thể khởi động server: {e}")
+
+    def wait_and_open_browser(self):
+        self.open_browser()
 
     def read_server_output(self):
         proc = self.server_process
@@ -290,20 +325,21 @@ class UnitreeLauncherApp:
             if not line:
                 break
             tag = None
-            if "error" in line.lower() or "exception" in line.lower() or "fail" in line.lower():
+            lower_line = line.lower()
+            if "error" in lower_line or "exception" in lower_line or "fail" in lower_line:
                 tag = "error"
-            elif "warning" in line.lower():
+            elif "warning" in lower_line:
                 tag = "warn"
-            elif "ket noi thanh cong" in line.lower() or "started" in line.lower() or "http" in line:
+            elif "ket noi" in lower_line or "started" in lower_line or "http" in lower_line or "complete" in lower_line:
                 tag = "success"
-            self.root.after(0, self.append_log, line, tag)
+            self.log_queue.put((line, tag))
 
         proc.stdout.close()
         proc.wait()
-        self.is_running = False
-        self.root.after(0, self.on_server_stopped)
+        self.log_queue.put("__SERVER_STOPPED__")
 
     def on_server_stopped(self):
+        self.is_running = False
         self.set_status("● SERVER ĐÃ DỪNG", "#f87171", "#450a0a")
         self.append_log(f"[{time.strftime('%H:%M:%S')}] Server đã dừng.\n", "warn")
         self.btn_stop.config(state=tk.DISABLED)
@@ -313,10 +349,11 @@ class UnitreeLauncherApp:
             self.append_log(f"[{time.strftime('%H:%M:%S')}] Đang dừng server...\n", "warn")
             try:
                 self.server_process.terminate()
-                # Cho 1 giây trước khi kill
                 self.root.after(1000, self.force_kill_if_needed)
             except Exception as e:
                 self.append_log(f"Lỗi khi dừng server: {e}\n", "error")
+        else:
+            self.on_server_stopped()
 
     def force_kill_if_needed(self):
         if self.server_process:
