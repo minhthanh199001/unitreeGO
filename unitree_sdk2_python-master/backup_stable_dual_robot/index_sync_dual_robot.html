@@ -2,9 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LEHOANG ROBOTICS">
+    <meta name="theme-color" content="#00f0ff">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
     <title>LEHOANG ROBOTICS | Multi-Robot Swarm Control</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&family=Rajdhani:wght@500;700&display=swap');
 
@@ -136,22 +145,199 @@
 
         .cockpit-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            align-items: start;
+            grid-template-columns: minmax(260px, 1fr) minmax(360px, 1.4fr) minmax(260px, 1fr);
+            gap: 16px;
+            align-items: stretch;
             width: 100%;
         }
 
         .cockpit-col {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
 
-        @media (max-width: 1080px) {
+        @media (max-width: 900px) and (orientation: portrait) {
             .cockpit-grid {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* Swarm Buttons Styling */
+        .swarm-btn {
+            background: rgba(10, 16, 30, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #cbd5e1;
+            padding: 8px 16px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .swarm-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 240, 255, 0.5);
+            color: #fff;
+        }
+
+        .info-badge-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 17px;
+            height: 17px;
+            background: #0077ff;
+            color: #ffffff;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            font-family: monospace, sans-serif;
+            line-height: 1;
+            margin-right: 4px;
+        }
+
+        /* Khi chọn 1 robot cụ thể (Viền Gradient cầu vồng neon như ảnh mẫu) */
+        .swarm-btn.active:not(#btn-target-all) {
+            background: linear-gradient(rgba(10, 16, 30, 0.95), rgba(10, 16, 30, 0.95)) padding-box, 
+                        linear-gradient(90deg, #ff0055, #9900ff, #00f0ff, #00ff66, #ffcc00) border-box;
+            border: 2px solid transparent;
+            color: #ffffff;
+            box-shadow: 0 0 18px rgba(0, 240, 255, 0.45), inset 0 0 10px rgba(255, 0, 85, 0.25);
+            font-weight: 700;
+        }
+
+        /* Nút Đồng bộ tất cả (Viền Cyan sáng) */
+        #btn-target-all {
+            border: 1.5px solid rgba(0, 240, 255, 0.45);
+            color: var(--primary-glow);
+            background: rgba(0, 240, 255, 0.08);
+        }
+
+        #btn-target-all.active {
+            background: rgba(0, 240, 255, 0.25);
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 22px rgba(0, 240, 255, 0.5);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        /* Combobox xổ chọn đơn Robot */
+        .swarm-select-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            background: rgba(10, 16, 30, 0.9);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 2px 10px 2px 12px;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .swarm-select-wrapper:hover {
+            border-color: rgba(0, 240, 255, 0.5);
+        }
+
+        .swarm-select-wrapper.active {
+            background: rgba(0, 119, 255, 0.18);
+            border: 2px solid #00f0ff;
+            box-shadow: 0 0 18px rgba(0, 240, 255, 0.45);
+        }
+
+        .swarm-select {
+            background: transparent;
+            color: #e2e8f0;
+            border: none;
+            outline: none;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 6px 4px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding-right: 22px;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2300f0ff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right center;
+        }
+
+        .swarm-select option {
+            background: #0b1120;
+            color: #ffffff;
+            font-size: 0.9rem;
+            padding: 8px;
+        }
+
+        /* Voice Capsule Toolbar Button */
+        .voice-capsule-btn {
+            background: rgba(10, 16, 30, 0.9);
+            border: 1.5px solid rgba(0, 240, 255, 0.4);
+            border-radius: 12px;
+            color: #00f0ff;
+            padding: 7px 15px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 4px 14px rgba(0, 240, 255, 0.15);
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        .voice-capsule-btn:hover {
+            border-color: #00f0ff;
+            box-shadow: 0 0 18px rgba(0, 240, 255, 0.45);
+            color: #ffffff;
+        }
+
+        .voice-capsule-btn.listening {
+            background: rgba(255, 0, 60, 0.25) !important;
+            border-color: #ff003c !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 22px rgba(255, 0, 60, 0.6) !important;
+            animation: pulse-mic 1.2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-mic {
+            0% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 0, 60, 0.4); }
+            50% { transform: scale(1.04); box-shadow: 0 0 22px rgba(255, 0, 60, 0.85); }
+            100% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 0, 60, 0.4); }
+        }
+
+        .voice-status-pill {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 0.5px;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.3s ease;
+        }
+
+        .voice-status-pill.active-result {
+            color: #00ff66;
+            border-color: rgba(0, 255, 100, 0.4);
+            background: rgba(0, 255, 100, 0.12);
+            box-shadow: 0 0 14px rgba(0, 255, 100, 0.25);
+            font-weight: 700;
         }
 
         .voice-chip {
@@ -426,47 +612,298 @@
 
         .joystick-zone {
             position: relative;
-            width: 200px;
-            height: 200px;
+            width: 175px;
+            height: 175px;
             border-radius: 50%;
-            background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.05), rgba(0, 0, 0, 0.4));
-            border: 2px solid rgba(0, 240, 255, 0.15);
-            box-shadow: inset 0 0 30px rgba(0, 240, 255, 0.05), 0 0 20px rgba(0, 0, 0, 0.5);
+            background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.2) 0%, rgba(0, 240, 255, 0.08) 45%, rgba(0, 240, 255, 0.02) 75%, rgba(0, 0, 0, 0.8) 100%);
+            border: 1.5px solid rgba(0, 240, 255, 0.35);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.1);
             touch-action: none;
             user-select: none;
             cursor: grab;
-        }
-        
-        /* Specific glow for turn joystick */
-        #joystick-turn {
-            background: radial-gradient(circle at 50% 50%, rgba(255, 0, 60, 0.05), rgba(0, 0, 0, 0.4));
-            border-color: rgba(255, 0, 60, 0.15);
-            box-shadow: inset 0 0 30px rgba(255, 0, 60, 0.05), 0 0 20px rgba(0, 0, 0, 0.5);
-            touch-action: none;
-            user-select: none;
-            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
         }
 
-        /* Crosshairs in joysticks */
-        .joystick-zone::before, .joystick-zone::after {
+        /* Crosshairs: Trục tọa độ tâm (Thập tự tâm) */
+        .joystick-zone::before {
             content: '';
             position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            pointer-events: none; /* Không cản trở sự kiện kéo chuột */
+            top: 0; left: 50%;
+            width: 1px; height: 100%;
+            background: rgba(0, 240, 255, 0.25);
+            pointer-events: none;
         }
-        .joystick-zone::before { top: 0; bottom: 0; left: 50%; width: 1px; transform: translateX(-50%); }
-        .joystick-zone::after { left: 0; right: 0; top: 50%; height: 1px; transform: translateY(-50%); }
+        .joystick-zone::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 0;
+            width: 100%; height: 1px;
+            background: rgba(0, 240, 255, 0.25);
+            pointer-events: none;
+        }
+
+        /* Vòng tròn đồng tâm bia ngắm bên trong */
+        .joystick-ring-mid {
+            position: absolute;
+            width: 105px;
+            height: 105px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(0, 240, 255, 0.35);
+            background: rgba(0, 240, 255, 0.08);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .joystick-ring-core {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.6) 0%, rgba(0, 240, 255, 0.25) 100%);
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+            pointer-events: none;
+        }
+        
+        /* Joystick Xoay (Đỏ) */
+        #joystick-turn {
+            background: radial-gradient(circle at 50% 50%, rgba(255, 0, 60, 0.2) 0%, rgba(255, 0, 60, 0.08) 45%, rgba(255, 0, 60, 0.02) 75%, rgba(0, 0, 0, 0.8) 100%);
+            border-color: rgba(255, 0, 60, 0.35);
+            box-shadow: 0 0 25px rgba(255, 0, 60, 0.15), inset 0 0 20px rgba(255, 0, 60, 0.1);
+        }
+
+        #joystick-turn::before,
+        #joystick-turn::after {
+            background: rgba(255, 0, 60, 0.25);
+        }
+
+        #joystick-turn .joystick-ring-mid {
+            border-color: rgba(255, 0, 60, 0.35);
+            background: rgba(255, 0, 60, 0.08);
+        }
+
+        #joystick-turn .joystick-ring-core {
+            background: radial-gradient(circle, rgba(255, 0, 60, 0.6) 0%, rgba(255, 0, 60, 0.25) 100%);
+            box-shadow: 0 0 16px rgba(255, 0, 60, 0.35);
+        }
+
+        /* Nipplejs thumb và ring */
+        .nipple .back {
+            opacity: 0.2 !important;
+        }
+        .nipple .front {
+            box-shadow: 0 0 16px currentColor;
+        }
 
         @media (max-width: 768px) {
             .container {
-                padding: 15px;
-                grid-template-columns: 1fr;
+                padding: 12px;
             }
             header {
-                padding: 15px 20px;
+                padding: 12px 16px;
             }
             header h1 {
-                font-size: 1.5rem;
+                font-size: 1.35rem;
+            }
+        }
+
+        /* ==========================================================================
+           TỐI GIẢN HOÀN TOÀN CHO 1 MÀN HÌNH ĐIỆN THOẠI NẰM NGANG (100VH - KHÔNG CUỘN)
+           ========================================================================== */
+        @media screen and (max-height: 620px), screen and (max-width: 950px) and (orientation: landscape) {
+            html, body {
+                height: 100vh !important;
+                max-height: 100vh !important;
+                overflow: hidden !important; /* Vừa khít 1 màn hình tuyệt đối, không cuộn */
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #080b12 !important;
+            }
+
+            /* Giấu Header lớn trên bản web khi xem trên điện thoại ngang */
+            header {
+                display: none !important;
+            }
+
+            .container {
+                height: 100vh !important;
+                max-height: 100vh !important;
+                padding: 6px 12px !important;
+                max-width: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Thanh chọn Swarm Mode trên cùng */
+            .swarm-toolbar {
+                margin-bottom: 4px !important;
+                flex-shrink: 0;
+            }
+
+            .swarm-btn {
+                padding: 6px 14px !important;
+                font-size: 0.82rem !important;
+                border-radius: 10px !important;
+            }
+
+            .swarm-select-wrapper {
+                padding: 1px 8px 1px 10px !important;
+                border-radius: 10px !important;
+            }
+
+            .swarm-select {
+                font-size: 0.82rem !important;
+                padding: 4px 2px !important;
+            }
+
+            .voice-capsule-btn {
+                padding: 5px 12px !important;
+                font-size: 0.8rem !important;
+                border-radius: 10px !important;
+            }
+
+            .voice-status-pill {
+                padding: 4px 8px !important;
+                font-size: 0.74rem !important;
+                max-width: 130px !important;
+                border-radius: 8px !important;
+            }
+
+            /* Lưới Cockpit 3 cột: Trái (Move) - Giữa (Tricks + Mic) - Phải (Turn) */
+            .cockpit-grid {
+                flex: 1;
+                display: grid !important;
+                grid-template-columns: 210px 1fr 210px !important;
+                gap: 10px !important;
+                align-items: center !important;
+                height: calc(100vh - 54px) !important;
+                margin-bottom: 0 !important;
+            }
+
+            .cockpit-col {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            /* Cột 1 và Cột 3: Loại bỏ hoàn toàn nền, viền card, chỉ để lại Joystick */
+            .cockpit-col:first-child .card,
+            .cockpit-col:last-child .card {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100%;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            .cockpit-col:first-child .card::before,
+            .cockpit-col:last-child .card::before {
+                display: none !important;
+            }
+
+            /* Giấu mọi phần tử phụ: Sliders, Headings, Hotkeys, Buttons posture/stop */
+            .cockpit-col:first-child .card > *:not(.joystick-panel),
+            .cockpit-col:last-child .card > *:not(.joystick-panel),
+            .joystick-label {
+                display: none !important;
+            }
+
+            .joystick-panel {
+                margin: 0 !important;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .joystick-zone {
+                width: 165px !important;
+                height: 165px !important;
+            }
+
+            /* Cột Giữa: Card Tricks */
+            .cockpit-col:nth-child(2) {
+                justify-content: center !important;
+                gap: 4px !important;
+            }
+
+            .cockpit-col:nth-child(2) .card:first-child {
+                background: rgba(12, 17, 28, 0.95) !important;
+                border: 1px solid rgba(255, 255, 255, 0.12) !important;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
+                padding: 6px 10px !important;
+                border-radius: 12px !important;
+                width: 100% !important;
+                max-width: 480px !important;
+                margin: 0 !important;
+            }
+
+            .cockpit-col:nth-child(2) .card:first-child h2,
+            #trick-feedback {
+                display: none !important;
+            }
+
+            .trick-group {
+                margin-bottom: 4px !important;
+            }
+            .trick-group:last-child {
+                margin-bottom: 0 !important;
+            }
+
+            .trick-title {
+                font-size: 0.71rem !important;
+                margin-bottom: 2px !important;
+                font-weight: 700 !important;
+                letter-spacing: 1px !important;
+            }
+
+            .btn-trick {
+                padding: 4px 5px !important;
+                font-size: 0.73rem !important;
+                border-radius: 7px !important;
+                background: rgba(22, 27, 34, 0.85) !important;
+            }
+
+            /* Voice Card: Giấu card lớn, chỉ hiện nút Mic ở giữa */
+            .voice-card {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .voice-card::before,
+            .voice-card h2,
+            #voice-transcript,
+            .voice-chips-container {
+                display: none !important;
+            }
+
+            #mic-btn {
+                width: 48px !important;
+                height: 48px !important;
+                border-radius: 50% !important;
+                background: radial-gradient(circle at 40% 40%, #2a3447, #131b2a) !important;
+                border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.2) !important;
+                font-size: 1.35rem !important;
+                margin: 0 !important;
             }
         }
     </style>
@@ -492,130 +929,109 @@
     </header>
 
     <div class="container">
-        
-        <!-- MODULE: ROBOT SWARM SELECTION TOOLBAR -->
-        <div class="card" style="padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: rgba(0, 240, 255, 0.04); border-color: rgba(0, 240, 255, 0.25);">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 1.4rem;">🤖</span>
-                <div>
-                    <h3 style="font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; letter-spacing: 2px; color: var(--primary-glow); margin: 0;">
-                        CHẾ ĐỘ ĐIỀU KHIỂN ROBOT SWARM
-                    </h3>
-                    <div style="color: var(--text-muted); font-size: 0.8rem;">
-                        Chọn điều khiển đồng bộ tất cả robot hoặc bấm chọn riêng từng con
-                    </div>
+        <!-- MODULE: ROBOT SWARM SELECTION TOOLBAR + VOICE CONTROL -->
+        <div class="swarm-toolbar" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+            <div id="swarm-selector-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <button class="btn swarm-btn active" id="btn-target-all" onclick="setTargetRobot('all')">
+                    <span class="info-badge-icon">🔄</span> ĐỒNG BỘ TẤT CẢ ROBOT (2)
+                </button>
+                <div class="swarm-select-wrapper" id="single-robot-select-wrapper">
+                    <select id="single-robot-select" class="swarm-select" onchange="setTargetRobot(this.value)">
+                        <option value="" disabled selected>🎯 CHỌN ĐIỀU KHIỂN ĐƠN ROBOT ▼</option>
+                        <option value="robot1">🤖 1. ROBOT 1 (GO2_46945)</option>
+                        <option value="robot2">🤖 2. ROBOT 2 (GO2_48462)</option>
+                    </select>
                 </div>
             </div>
-            <div id="swarm-selector-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn swarm-btn active" id="btn-target-all" onclick="setTargetRobot('all')">🔄 ĐỒNG BỘ TẤT CẢ ROBOT</button>
+
+            <!-- PHƯƠNG ÁN 1: ĐIỀU KHIỂN GIỌNG NÓI TRÊN THANH CÔNG CỤ (GÓC TRÊN BÊN PHẢI) -->
+            <div class="voice-toolbar-module" style="display: flex; align-items: center; gap: 8px;">
+                <button id="top-mic-btn" class="btn voice-capsule-btn" title="Bấm để nói tiếng Việt">
+                    <span>🎤</span>
+                    <span id="top-voice-label">GIỌNG NÓI</span>
+                </button>
+                <div id="top-voice-status" class="voice-status-pill">Sẵn sàng</div>
             </div>
         </div>
 
-        <!-- MAIN 2-COLUMN COCKPIT GRID -->
+        <!-- MAIN 3-COLUMN GAMEPAD / COCKPIT GRID -->
         <div class="cockpit-grid">
 
-            <!-- ================= CỘT TRÁI: DI CHUYỂN & LỆNH CƠ BẢN ================= -->
+            <!-- ================= CỘT 1: DI CHUYỂN (TRANSLATION / MOVE JOYSTICK) ================= -->
             <div class="cockpit-col">
-
-                <!-- 1. KINEMATIC CONTROL (Di chuyển & Tốc độ) -->
                 <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                        <h2>Kinematic Control</h2>
-                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <button class="btn speed-preset-btn" onclick="setSpeedPreset('slow', 0.45, 0.8)" id="btn-speed-slow">🐢 Chậm (0.45)</button>
-                            <button class="btn speed-preset-btn active" onclick="setSpeedPreset('normal', 0.9, 1.3)" id="btn-speed-normal">🐕 Vừa (0.90)</button>
-                            <button class="btn speed-preset-btn" onclick="setSpeedPreset('fast', 1.5, 2.0)" id="btn-speed-fast" style="border-color: rgba(255,0,60,0.5); color: #ff003c;">🚀 Nhanh (1.50)</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <h2>COMMANDS</h2>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn speed-preset-btn" onclick="setSpeedPreset('slow', 0.45, 0.8)" id="btn-speed-slow" style="padding: 5px 10px; font-size: 0.78rem;">🐢 Chậm</button>
+                            <button class="btn speed-preset-btn active" onclick="setSpeedPreset('normal', 0.9, 1.3)" id="btn-speed-normal" style="padding: 5px 10px; font-size: 0.78rem;">🐕 Vừa</button>
+                            <button class="btn speed-preset-btn" onclick="setSpeedPreset('fast', 1.5, 2.0)" id="btn-speed-fast" style="border-color: rgba(255,0,60,0.5); color: #ff003c; padding: 5px 10px; font-size: 0.78rem;">🚀 Nhanh (1.50)</button>
                         </div>
                     </div>
 
-                    <!-- Thanh trượt tốc độ gọn gàng -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
-                        <div class="slider-container" style="margin-bottom: 0;">
-                            <div class="slider-header" style="font-size: 0.78rem;">
-                                <span>Tốc độ di chuyển</span>
-                                <span class="slider-val" id="speed-max-val" style="font-size: 0.95rem;">0.90 m/s</span>
+                    <!-- Thanh trượt tốc độ di chuyển -->
+                    <div class="slider-container" style="margin-bottom: 14px; background: rgba(255,255,255,0.02); padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                        <div class="slider-header" style="font-size: 0.78rem;">
+                            <span>TỐC ĐỘ DI CHUYỂN</span>
+                            <span class="slider-val" id="speed-max-val" style="font-size: 0.95rem;">0.90 m/s</span>
+                        </div>
+                        <input type="range" id="speed-slider" min="0.2" max="2.0" step="0.05" value="0.9" oninput="onSpeedSliderChange(this.value)">
+                    </div>
+
+                    <!-- Joystick Moving Direction -->
+                    <div class="joystick-panel" style="margin-bottom: 14px;">
+                        <div class="joystick-label" style="font-size: 0.95rem; font-weight: 700; color: var(--primary-glow); letter-spacing: 2px;">
+                            Moving Direction
+                        </div>
+                        <div class="joystick-zone" id="joystick-move">
+                            <div class="joystick-ring-mid">
+                                <div class="joystick-ring-core"></div>
                             </div>
-                            <input type="range" id="speed-slider" min="0.2" max="2.0" step="0.05" value="0.9" oninput="onSpeedSliderChange(this.value)">
-                        </div>
-                        <div class="slider-container" style="margin-bottom: 0;">
-                            <div class="slider-header" style="font-size: 0.78rem;">
-                                <span>Tốc độ quay đầu</span>
-                                <span class="slider-val" id="yaw-speed-max-val" style="font-size: 0.95rem;">1.30 rad/s</span>
-                            </div>
-                            <input type="range" id="yaw-slider" min="0.4" max="2.5" step="0.1" value="1.3" oninput="onYawSliderChange(this.value)">
                         </div>
                     </div>
 
-                    <!-- 2 Joysticks -->
-                    <div class="joysticks-wrapper" style="margin: 10px 0;">
-                        <div class="joystick-panel">
-                            <div class="joystick-label">Translation (Tiến / Lùi / Trái / Phải)</div>
-                            <div class="joystick-zone" id="joystick-move"></div>
-                        </div>
-                        <div class="joystick-panel">
-                            <div class="joystick-label">Rotation (Quay đầu Trái / Phải)</div>
-                            <div class="joystick-zone" id="joystick-turn"></div>
-                        </div>
-                    </div>
-
-                    <!-- Hướng dẫn phím bấm bàn phím máy tính -->
-                    <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-                        <div style="background: rgba(255,255,255,0.04); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(0,240,255,0.25); font-size: 0.8rem; color: var(--primary-glow);">
-                            ⌨️ <b>W / S / A / D:</b> Di chuyển
-                        </div>
-                        <div style="background: rgba(255,255,255,0.04); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,0,60,0.25); font-size: 0.8rem; color: #ff4a6e;">
-                            ⌨️ <b>Q / E:</b> Xoay đầu
-                        </div>
-                        <div style="background: rgba(255,255,255,0.04); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(0,255,100,0.25); font-size: 0.8rem; color: #00ff66;">
+                    <!-- Phím tắt Shift & Space -->
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+                        <div style="background: rgba(0,255,100,0.06); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(0,255,100,0.3); font-size: 0.78rem; color: #00ff66;">
                             ⚡ <b>Shift:</b> Turbo x1.4
                         </div>
-                        <div style="background: rgba(255,255,255,0.04); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,215,0,0.25); font-size: 0.8rem; color: #ffd700;">
+                        <div style="background: rgba(255,215,0,0.06); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(255,215,0,0.3); font-size: 0.78rem; color: #ffd700;">
                             ⌨️ <b>Space:</b> Phanh dừng
                         </div>
                     </div>
-                </div>
 
-                <!-- 2. COMMAND CORE (Hành động cơ bản & Phanh khẩn cấp) -->
-                <div class="card">
-                    <h2>Command Core</h2>
-                    <div class="buttons-grid" style="margin-bottom: 12px;">
-                        <button class="btn" onclick="sendAction('stand_up')" style="border-color: rgba(0, 240, 255, 0.3);">🟢 Stand Up (Đứng Dậy)</button>
-                        <button class="btn" onclick="sendAction('stand_down')" style="border-color: rgba(255, 215, 0, 0.3);">🟡 Sit Down (Ngồi Xuống)</button>
-                        <button class="btn" onclick="sendAction('balance')">🔵 Balance Stand (Thăng Bằng)</button>
-                        <button class="btn" onclick="sendAction('recovery')">🟠 Recovery Stand (Phục Hồi)</button>
-                        <button class="btn" onclick="sendAction('take_control')" style="font-size: 0.85rem; color: #cbd5e1;">🎮 Take Control (SDK)</button>
-                        <button class="btn" onclick="sendAction('release_control')" style="font-size: 0.85rem; color: #cbd5e1;">🔄 Release Control</button>
+                    <!-- Các nút cơ bản -->
+                    <div class="buttons-grid" style="gap: 8px;">
+                        <button class="btn" onclick="sendAction('stand_up')" style="border-color: rgba(0, 240, 255, 0.3); padding: 10px; font-size: 0.85rem;">🟢 Stand Up</button>
+                        <button class="btn" onclick="sendAction('stand_down')" style="border-color: rgba(255, 215, 0, 0.3); padding: 10px; font-size: 0.85rem;">🟡 Sit Down</button>
+                        <button class="btn" onclick="sendAction('balance')" style="padding: 10px; font-size: 0.85rem;">🔵 Balance</button>
+                        <button class="btn" onclick="sendAction('recovery')" style="padding: 10px; font-size: 0.85rem;">🟠 Recovery</button>
                     </div>
-                    <button class="btn btn-danger btn-full" style="padding: 16px; font-size: 1.15rem; letter-spacing: 2px; width: 100%;" onclick="sendAction('stop')">
-                        🛑 EMERGENCY STOP (DỪNG KHẨN CẤP)
-                    </button>
                 </div>
-
             </div>
 
-            <!-- ================= CỘT PHẢI: KỸ NĂNG BIỂU DIỄN & GIỌNG NÓI ================= -->
+            <!-- ================= CỘT 2: KỸ NĂNG BIỂU DIỄN & GIỌNG NÓI ================= -->
             <div class="cockpit-col">
-
-                <!-- 3. TRICKS & PERFORMANCE (Kỹ năng biểu diễn phân loại trực quan) -->
+                <!-- TRICKS & PERFORMANCE -->
                 <div class="card">
                     <h2>Tricks & Performance</h2>
                     
-                    <!-- Nhóm 1: Nhảy Múa -->
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 0.75rem; color: var(--primary-glow); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600;">
-                            💃 Nhảy Múa & Vũ Đạo
+                    <!-- Nhóm 1: NHẢY MÚA & VŨ ĐẠO -->
+                    <div class="trick-group" style="margin-bottom: 12px;">
+                        <div class="trick-title" style="font-size: 0.78rem; color: #00f0ff; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700;">
+                            ✨ NHẢY MÚA & VŨ ĐẠO
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                             <button class="btn btn-trick" onclick="sendAction('dance1')" title="Nhảy múa điệu 1">💃 Dance 1</button>
-                            <button class="btn btn-trick" onclick="sendAction('dance2')" title="Nhảy múa điệu 2">🕺 Dance 2</button>
+                            <button class="btn btn-trick active" onclick="sendAction('dance2')" title="Nhảy múa điệu 2">🕺 Dance 2</button>
                             <button class="btn btn-trick" onclick="sendAction('moonwalk')" title="Đi lùi nghệ thuật">🕺 Moonwalk</button>
                         </div>
                     </div>
 
-                    <!-- Nhóm 2: Tương Tác & Thân Thiện -->
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 0.75rem; color: #ffd700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600;">
-                            🤝 Tương Tác & Thân Thiện
+                    <!-- Nhóm 2: TƯƠNG TÁC & THÂN THIỆN -->
+                    <div class="trick-group" style="margin-bottom: 12px;">
+                        <div class="trick-title" style="font-size: 0.78rem; color: #ffd700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700;">
+                            ❤️ TƯƠNG TÁC & THÂN THIỆN
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                             <button class="btn btn-trick" onclick="sendAction('shake_hands')" title="Bắt tay bạn">🤝 Shake Hands</button>
@@ -624,22 +1040,25 @@
                         </div>
                     </div>
 
-                    <!-- Nhóm 3: Nhanh Nhẹn & Thao Diễn -->
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 0.75rem; color: #ff003c; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600;">
-                            🐅 Nhanh Nhẹn & Thao Diễn
+                    <!-- Nhóm 3: NHANH NHẸN & THAO DIỄN -->
+                    <div class="trick-group" style="margin-bottom: 12px;">
+                        <div class="trick-title" style="font-size: 0.78rem; color: #ff003c; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700;">
+                            🐅 NHANH NHẸN & THAO DIỄN
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                             <button class="btn btn-trick" onclick="sendAction('pounce')" title="Vồ mồi chồm tới">🐅 Front Pounce</button>
                             <button class="btn btn-trick" onclick="sendAction('jump_forward')" title="Nhảy về phía trước">🦘 Jump Forward</button>
+                            <button class="btn btn-trick" onclick="sendAction('bound')" title="Nhảy bật tưng bừng">🦘 Bound Jump</button>
                             <button class="btn btn-trick" onclick="sendAction('front_flip')" title="Lộn nhào trước">🤸 Front Flip</button>
+                            <button class="btn btn-trick" onclick="sendAction('back_flip')" title="Lộn nhào sau">🤸 Back Flip</button>
+                            <button class="btn btn-trick" onclick="sendAction('handstand')" title="Trồng cây chuối">🤸 Handstand</button>
                         </div>
                     </div>
 
-                    <!-- Nhóm 4: Vận Động & Vui Nhộn -->
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 0.75rem; color: #00ff66; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 600;">
-                            🐕 Vận Động & Vui Nhộn
+                    <!-- Nhóm 4: VẬN ĐỘNG & VUI NHỘN -->
+                    <div class="trick-group" style="margin-bottom: 12px;">
+                        <div class="trick-title" style="font-size: 0.78rem; color: #00ff66; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700;">
+                            🐕 VẬN ĐỘNG & VUI NHỘN
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                             <button class="btn btn-trick" onclick="sendAction('stretch')" title="Vươn vai / Giãn cơ">🧘 Stretch</button>
@@ -648,39 +1067,103 @@
                         </div>
                     </div>
 
-                    <div id="trick-feedback" style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted); text-align: center; min-height: 20px; font-family: 'Rajdhani', sans-serif; letter-spacing: 1px;">
+                    <div id="trick-feedback" style="margin-top: 6px; font-size: 0.85rem; color: var(--text-muted); text-align: center; min-height: 20px; font-family: 'Rajdhani', sans-serif; letter-spacing: 1px;">
                         // Bấm nút để robot biểu diễn động tác //
                     </div>
                 </div>
 
-                <!-- 4. VOICE COMMAND (Điều khiển giọng nói tiếng Việt thông minh) -->
-                <div class="card" style="display: flex; flex-direction: column; align-items: center;">
-                    <h2>Voice Intelligence</h2>
-                    <button id="mic-btn" class="btn" style="width: 76px; height: 76px; border-radius: 50%; font-size: 2rem; margin-bottom: 10px; cursor: pointer;">🎤</button>
-                    <div id="voice-transcript" style="color: var(--primary-glow); font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; min-height: 28px; letter-spacing: 1px; text-align: center; margin-bottom: 14px;">
-                        Nhấn mic và nói tiếng Việt (hoặc bấm nhanh vào các câu lệnh dưới)
+                <!-- VOICE INTELLIGENCE & LỆNH NHANH -->
+                <div class="card voice-card" style="display: flex; flex-direction: column; align-items: center; padding: 14px 16px;">
+                    <h2>Voice Intelligence & Lệnh Nhanh</h2>
+                    <button id="mic-btn" class="btn" style="width: 58px; height: 58px; border-radius: 50%; font-size: 1.7rem; margin-bottom: 8px; cursor: pointer;">🎤</button>
+                    <div id="voice-transcript" style="color: var(--primary-glow); font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; min-height: 22px; letter-spacing: 0.5px; text-align: center; margin-bottom: 10px;">
+                        Nhấn mic và nói tiếng Việt (hoặc bấm lệnh nhanh bên dưới)
                     </div>
-                    
-                    <!-- Danh sách câu lệnh mẫu dạng clickable chips -->
-                    <div style="display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.78rem;">
-                        <span class="voice-chip" onclick="executeVoiceChip('dance1', 'Nhảy múa')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">💃 "Nhảy múa"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('dance2', 'Nhảy điệu 2')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🕺 "Nhảy điệu 2"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('shake_hands', 'Bắt tay')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🤝 "Bắt tay"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('greet', 'Chào hỏi')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">👋 "Chào bạn"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('heart', 'Bắn tim')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">❤️ "Bắn tim"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('stretch', 'Vươn vai')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🧘 "Vươn vai"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('pounce', 'Vồ mồi')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🐅 "Vồ mồi"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('jump_forward', 'Nhảy tới')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🦘 "Nhảy tới"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('wiggle_hips', 'Lắc mông')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); padding: 4px 8px; border-radius: 6px; color: #ffd700;">🐕 "Lắc mông"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('stand_up', 'Đứng lên')" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.3); padding: 4px 8px; border-radius: 6px; color: var(--primary-glow);">🧍 "Đứng lên"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('stand_down', 'Ngồi xuống')" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.3); padding: 4px 8px; border-radius: 6px; color: var(--primary-glow);">🧎 "Ngồi xuống"</span>
-                        <span class="voice-chip" onclick="executeVoiceChip('balance', 'Thăng bằng')" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.3); padding: 4px 8px; border-radius: 6px; color: var(--primary-glow);">⚖️ "Thăng bằng"</span>
-                        <span class="voice-chip" onclick="executeVoiceMove(0.4, 0, 0); document.getElementById('voice-transcript').innerText='Đã nhận lệnh: Tiến lên';" style="background: rgba(0,255,100,0.1); border: 1px solid rgba(0,255,100,0.3); padding: 4px 8px; border-radius: 6px; color: #00ff66;">🚀 "Tiến lên"</span>
-                        <span class="voice-chip" onclick="executeVoiceMove(-0.4, 0, 0); document.getElementById('voice-transcript').innerText='Đã nhận lệnh: Lùi lại';" style="background: rgba(0,255,100,0.1); border: 1px solid rgba(0,255,100,0.3); padding: 4px 8px; border-radius: 6px; color: #00ff66;">🔙 "Lùi lại"</span>
-                        <span class="voice-chip" onclick="sendAction('stop'); document.getElementById('voice-transcript').innerText='Đã nhận lệnh: Dừng lại';" style="background: rgba(255,0,60,0.1); border: 1px solid rgba(255,0,60,0.3); padding: 4px 8px; border-radius: 6px; color: #ff003c;">🛑 "Dừng lại"</span>
+                    <div class="voice-chips-container" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                        <!-- Nhóm các kiểu nhảy & vũ đạo -->
+                        <div>
+                            <div style="font-size: 0.72rem; color: #00f0ff; letter-spacing: 1.2px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; text-align: center;">
+                                🦘 ĐẦY ĐỦ CÁC KIỂU NHẢY & BIỂU DIỄN VŨ ĐẠO
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-size: 0.78rem;">
+                                <span class="voice-chip" onclick="executeVoiceChip('dance1', 'Nhảy điệu 1')" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.35); padding: 4px 8px; border-radius: 8px; color: #00f0ff;">💃 "Nhảy điệu 1"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('dance2', 'Nhảy điệu 2')" style="background: rgba(0,240,255,0.1); border: 1px solid rgba(0,240,255,0.35); padding: 4px 8px; border-radius: 8px; color: #00f0ff;">🕺 "Nhảy điệu 2"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('jump_forward', 'Nhảy về trước')" style="background: rgba(255,0,60,0.1); border: 1px solid rgba(255,0,60,0.35); padding: 4px 8px; border-radius: 8px; color: #ff003c;">🦘 "Nhảy về trước"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('pounce', 'Nhảy vồ mồi')" style="background: rgba(255,0,60,0.1); border: 1px solid rgba(255,0,60,0.35); padding: 4px 8px; border-radius: 8px; color: #ff003c;">🐅 "Nhảy vồ mồi"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('bound', 'Nhảy bật Bound')" style="background: rgba(255,165,0,0.12); border: 1px solid rgba(255,165,0,0.4); padding: 4px 8px; border-radius: 8px; color: #ffa500;">🦘 "Nhảy bật (Bound)"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('front_flip', 'Lộn nhào trước')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.35); padding: 4px 8px; border-radius: 8px; color: #ffd700;">🤸 "Lộn nhào trước"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('back_flip', 'Lộn nhào sau')" style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.35); padding: 4px 8px; border-radius: 8px; color: #ffd700;">🤸 "Lộn nhào sau"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('moonwalk', 'Đi lùi Moonwalk')" style="background: rgba(0,255,100,0.1); border: 1px solid rgba(0,255,100,0.35); padding: 4px 8px; border-radius: 8px; color: #00ff66;">🕺 "Nhảy Moonwalk"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('handstand', 'Trồng cây chuối')" style="background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.35); padding: 4px 8px; border-radius: 8px; color: #c084fc;">🤸 "Trồng chuối"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('cross_step', 'Bước chéo')" style="background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.35); padding: 4px 8px; border-radius: 8px; color: #38bdf8;">💃 "Bước chéo"</span>
+                            </div>
+                        </div>
+
+                        <!-- Nhóm lệnh tương tác cơ bản -->
+                        <div style="margin-top: 4px;">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); letter-spacing: 1.2px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; text-align: center;">
+                                ⚡ LỆNH CƠ BẢN & PHANH DỪNG
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-size: 0.78rem;">
+                                <span class="voice-chip" onclick="executeVoiceChip('stand_up', 'Đứng lên')" style="background: rgba(0,240,255,0.08); border: 1px solid rgba(0,240,255,0.25); padding: 4px 8px; border-radius: 8px; color: var(--primary-glow);">🧍 "Đứng lên"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('stand_down', 'Ngồi xuống')" style="background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.25); padding: 4px 8px; border-radius: 8px; color: #ffd700;">🟡 "Ngồi xuống"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('shake_hands', 'Bắt tay')" style="background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.25); padding: 4px 8px; border-radius: 8px; color: #ffd700;">🤝 "Bắt tay"</span>
+                                <span class="voice-chip" onclick="executeVoiceChip('greet', 'Chào hỏi')" style="background: rgba(0,255,100,0.08); border: 1px solid rgba(0,255,100,0.25); padding: 4px 8px; border-radius: 8px; color: #00ff66;">👋 "Vẫy chào"</span>
+                                <span class="voice-chip" onclick="sendAction('stop')" style="background: rgba(255,0,60,0.15); border: 1px solid rgba(255,0,60,0.4); padding: 4px 10px; border-radius: 8px; color: #ff003c; font-weight: 700;">🛑 "Dừng lại"</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
+            <!-- ================= CỘT 3: XOAY ĐẦU (ROTATION DIRECTION) ================= -->
+            <div class="cockpit-col">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <h2>COMMANDS</h2>
+                        <span style="font-size: 0.78rem; color: var(--text-muted); letter-spacing: 1px;">ROTATION AXIS</span>
+                    </div>
+
+                    <!-- Thanh trượt tốc độ quay đầu -->
+                    <div class="slider-container" style="margin-bottom: 14px; background: rgba(255,255,255,0.02); padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                        <div class="slider-header" style="font-size: 0.78rem;">
+                            <span>TỐC ĐỘ QUAY ĐẦU</span>
+                            <span class="slider-val" id="yaw-speed-max-val" style="font-size: 0.95rem;">1.30 rad/s</span>
+                        </div>
+                        <input type="range" id="yaw-slider" min="0.4" max="2.5" step="0.1" value="1.3" oninput="onYawSliderChange(this.value)">
+                    </div>
+
+                    <!-- Joystick Rotation Direction -->
+                    <div class="joystick-panel" style="margin-bottom: 14px;">
+                        <div class="joystick-label" style="font-size: 0.95rem; font-weight: 700; color: #ff003c; letter-spacing: 2px;">
+                            Rotation Direction
+                        </div>
+                        <div class="joystick-zone" id="joystick-turn">
+                            <div class="joystick-ring-mid">
+                                <div class="joystick-ring-core"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phím tắt Shift & Space -->
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+                        <div style="background: rgba(0,255,100,0.06); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(0,255,100,0.3); font-size: 0.78rem; color: #00ff66;">
+                            ⚡ <b>Shift:</b> Turbo x1.4
+                        </div>
+                        <div style="background: rgba(255,215,0,0.06); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(255,215,0,0.3); font-size: 0.78rem; color: #ffd700;">
+                            ⌨️ <b>Space:</b> Phanh dừng
+                        </div>
+                    </div>
+
+                    <!-- Take / Release Control và EMERGENCY STOP -->
+                    <div class="buttons-grid" style="gap: 8px; margin-bottom: 10px;">
+                        <button class="btn" onclick="sendAction('take_control')" style="font-size: 0.85rem; padding: 10px; color: #cbd5e1;">🎮 Take Control</button>
+                        <button class="btn" onclick="sendAction('release_control')" style="font-size: 0.85rem; padding: 10px; color: #cbd5e1;">🔄 Release Control</button>
+                    </div>
+                    <button class="btn btn-danger btn-full" style="padding: 13px; font-size: 1.05rem; letter-spacing: 1px; width: 100%;" onclick="sendAction('stop')">
+                        🛑 EMERGENCY STOP (DỪNG KHẨN CẤP)
+                    </button>
+                </div>
             </div>
 
         </div>
@@ -697,6 +1180,15 @@
             const transcriptDiv = document.getElementById('voice-transcript');
             if (transcriptDiv) {
                 transcriptDiv.innerText = `Đã bấm lệnh nhanh: "${label}"`;
+            }
+            const topVoiceStatus = document.getElementById('top-voice-status');
+            if (topVoiceStatus) {
+                topVoiceStatus.classList.add('active-result');
+                topVoiceStatus.innerText = `✅ "${label}"`;
+                setTimeout(() => {
+                    topVoiceStatus.classList.remove('active-result');
+                    topVoiceStatus.innerText = "Sẵn sàng";
+                }, 3500);
             }
             sendAction(actionCmd);
         }
@@ -723,24 +1215,27 @@
                 }).join('');
             }
 
-            // 2. Cập nhật các nút chọn Swarm Mode
+            // 2. Cập nhật các nút chọn Swarm Mode: Nút Đồng bộ + Combobox chọn đơn robot
             const swarmContainer = document.getElementById('swarm-selector-buttons');
             if (swarmContainer) {
-                const isAllActive = (currentTargetMode === 'all' || currentTargetMode === 'both') ? 'active' : '';
-                let buttonsHtml = `
-                    <button class="btn swarm-btn ${isAllActive}" id="btn-target-all" onclick="setTargetRobot('all')">
-                        🔄 ĐỒNG BỘ TẤT CẢ ROBOT (${robots.length})
-                    </button>
-                `;
+                const isAllActive = (currentTargetMode === 'all' || currentTargetMode === 'both');
+                
+                let selectOptions = `<option value="" disabled ${isAllActive ? 'selected' : ''}>🎯 CHỌN ĐIỀU KHIỂN ĐƠN ROBOT ▼</option>`;
                 robots.forEach((r, idx) => {
-                    const isActive = (currentTargetMode === r.id) ? 'active' : '';
-                    buttonsHtml += `
-                        <button class="btn swarm-btn ${isActive}" id="btn-target-${r.id}" onclick="setTargetRobot('${r.id}')">
-                            ${idx + 1}️⃣ CHỈ ${r.name.toUpperCase()}
-                        </button>
-                    `;
+                    const isSelected = (!isAllActive && currentTargetMode === r.id) ? 'selected' : '';
+                    selectOptions += `<option value="${r.id}" ${isSelected}>🤖 ${idx + 1}. ${r.name.toUpperCase()}</option>`;
                 });
-                swarmContainer.innerHTML = buttonsHtml;
+
+                swarmContainer.innerHTML = `
+                    <button class="btn swarm-btn ${isAllActive ? 'active' : ''}" id="btn-target-all" onclick="setTargetRobot('all')">
+                        <span class="info-badge-icon">🔄</span> ĐỒNG BỘ TẤT CẢ ROBOT (${robots.length})
+                    </button>
+                    <div class="swarm-select-wrapper ${!isAllActive ? 'active' : ''}" id="single-robot-select-wrapper">
+                        <select id="single-robot-select" class="swarm-select" onchange="setTargetRobot(this.value)">
+                            ${selectOptions}
+                        </select>
+                    </div>
+                `;
             }
 
             // 3. Nếu Modal Fleet đang mở -> Cập nhật danh sách trong Modal
@@ -752,9 +1247,20 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "set_target", target: target }));
             }
-            document.querySelectorAll('.swarm-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.getElementById('btn-target-' + target);
-            if (btn) btn.classList.add('active');
+
+            const btnAll = document.getElementById('btn-target-all');
+            const selectWrapper = document.getElementById('single-robot-select-wrapper');
+            const selectElem = document.getElementById('single-robot-select');
+
+            if (target === 'all' || target === 'both') {
+                if (btnAll) btnAll.classList.add('active');
+                if (selectWrapper) selectWrapper.classList.remove('active');
+                if (selectElem) selectElem.value = "";
+            } else {
+                if (btnAll) btnAll.classList.remove('active');
+                if (selectWrapper) selectWrapper.classList.add('active');
+                if (selectElem) selectElem.value = target;
+            }
         }
 
         ws.onopen = () => {
@@ -1007,29 +1513,56 @@
             recognition.interimResults = false;
 
             const micBtn = document.getElementById('mic-btn');
+            const topMicBtn = document.getElementById('top-mic-btn');
+            const topVoiceLabel = document.getElementById('top-voice-label');
+            const topVoiceStatus = document.getElementById('top-voice-status');
             const transcriptDiv = document.getElementById('voice-transcript');
             let isListening = false;
             let voiceMoveTimeout = null;
+            let statusResetTimeout = null;
 
-            micBtn.addEventListener('click', () => {
+            function toggleVoiceRecognition() {
                 if (isListening) {
                     recognition.stop();
                 } else {
-                    recognition.start();
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.warn("Speech recognition already active:", e);
+                    }
                 }
-            });
+            }
+
+            if (micBtn) micBtn.addEventListener('click', toggleVoiceRecognition);
+            if (topMicBtn) topMicBtn.addEventListener('click', toggleVoiceRecognition);
 
             recognition.onstart = () => {
                 isListening = true;
-                micBtn.style.backgroundColor = 'rgba(255, 0, 60, 0.3)';
-                micBtn.style.boxShadow = '0 0 20px rgba(255, 0, 60, 0.6)';
-                transcriptDiv.innerText = "Đang nghe...";
+                if (micBtn) {
+                    micBtn.style.backgroundColor = 'rgba(255, 0, 60, 0.3)';
+                    micBtn.style.boxShadow = '0 0 20px rgba(255, 0, 60, 0.6)';
+                }
+                if (topMicBtn) {
+                    topMicBtn.classList.add('listening');
+                }
+                if (topVoiceLabel) topVoiceLabel.innerText = "ĐANG NGHE...";
+                if (topVoiceStatus) {
+                    topVoiceStatus.classList.remove('active-result');
+                    topVoiceStatus.innerText = "🔴 Đang nghe...";
+                }
+                if (transcriptDiv) transcriptDiv.innerText = "Đang nghe...";
             };
 
             recognition.onend = () => {
                 isListening = false;
-                micBtn.style.backgroundColor = '';
-                micBtn.style.boxShadow = '';
+                if (micBtn) {
+                    micBtn.style.backgroundColor = '';
+                    micBtn.style.boxShadow = '';
+                }
+                if (topMicBtn) {
+                    topMicBtn.classList.remove('listening');
+                }
+                if (topVoiceLabel) topVoiceLabel.innerText = "GIỌNG NÓI";
             };
 
             // Hàm hỗ trợ chạy di chuyển bằng giọng nói trong 2 giây rồi tự dừng an toàn
@@ -1049,13 +1582,22 @@
                     moveData.vyaw = 0;
                     sendMove();
                     stopMoveLoop();
-                    transcriptDiv.innerText += " (Đã tự động dừng)";
+                    if (transcriptDiv) transcriptDiv.innerText += " (Đã tự động dừng)";
                 }, durationMs);
             }
 
             recognition.onresult = (event) => {
                 const text = event.results[0][0].transcript.toLowerCase().trim();
-                transcriptDiv.innerText = `Đã nghe: "${text}"`;
+                if (transcriptDiv) transcriptDiv.innerText = `Đã nghe: "${text}"`;
+                if (topVoiceStatus) {
+                    topVoiceStatus.classList.add('active-result');
+                    topVoiceStatus.innerText = `✅ "${text}"`;
+                    if (statusResetTimeout) clearTimeout(statusResetTimeout);
+                    statusResetTimeout = setTimeout(() => {
+                        topVoiceStatus.classList.remove('active-result');
+                        topVoiceStatus.innerText = "Sẵn sàng";
+                    }, 4000);
+                }
                 console.log("Voice Command:", text);
 
                 // 1. DỪNG LẠI KHẨN CẤP
@@ -1097,8 +1639,16 @@
                     sendAction('wiggle_hips');
                 } else if (text.includes("cào đất") || text.includes("bới đất") || text.includes("cào chân") || text.includes("scrape")) {
                     sendAction('scrape');
+                } else if (text.includes("nhảy bật") || text.includes("nhảy tưng") || text.includes("nhảy cẫng") || text.includes("bật nhảy") || text.includes("bound")) {
+                    sendAction('bound');
+                } else if (text.includes("lộn sau") || text.includes("lộn nhào sau") || text.includes("lộn ngược") || text.includes("back flip")) {
+                    sendAction('back_flip');
                 } else if (text.includes("lộn nhào") || text.includes("nhào lộn") || text.includes("lộn trước") || text.includes("lộn") || text.includes("front flip") || text.includes("flip")) {
                     sendAction('front_flip');
+                } else if (text.includes("trồng chuối") || text.includes("trồng cây chuối") || text.includes("đứng hai chân") || text.includes("handstand")) {
+                    sendAction('handstand');
+                } else if (text.includes("bước chéo") || text.includes("nhảy chéo") || text.includes("đi chéo") || text.includes("cross step")) {
+                    sendAction('cross_step');
                 } else if (text.includes("moonwalk") || text.includes("moon walk") || text.includes("đi lùi nghệ thuật")) {
                     sendAction('moonwalk');
                 }
@@ -1116,22 +1666,34 @@
                 } else if (text.includes("quay phải") || text.includes("xoay phải")) {
                     executeVoiceMove(0, 0, -0.6);
                 } else {
-                    transcriptDiv.innerText = `Không rõ lệnh: "${text}"`;
+                    if (transcriptDiv) transcriptDiv.innerText = `Không rõ lệnh: "${text}"`;
                 }
             };
 
             recognition.onerror = (event) => {
                 if (event.error === 'no-speech') {
-                    transcriptDiv.innerText = "Chưa nghe thấy gì, bạn nhấn mic và nói lại nhé.";
+                    if (transcriptDiv) transcriptDiv.innerText = "Chưa nghe thấy gì, bạn nhấn mic và nói lại nhé.";
                 } else {
-                    transcriptDiv.innerText = `Lỗi Mic: ${event.error}`;
+                    if (transcriptDiv) transcriptDiv.innerText = `Lỗi Mic: ${event.error}`;
                 }
                 isListening = false;
-                micBtn.style.backgroundColor = '';
-                micBtn.style.boxShadow = '';
+                if (micBtn) {
+                    micBtn.style.backgroundColor = '';
+                    micBtn.style.boxShadow = '';
+                }
+                if (topMicBtn) topMicBtn.classList.remove('listening');
+                if (topVoiceLabel) topVoiceLabel.innerText = "GIỌNG NÓI";
+                if (topVoiceStatus) {
+                    topVoiceStatus.classList.remove('active-result');
+                    topVoiceStatus.innerText = "Thử lại";
+                    setTimeout(() => { if (topVoiceStatus) topVoiceStatus.innerText = "Sẵn sàng"; }, 3000);
+                }
             };
         } else {
-            document.getElementById('voice-transcript').innerText = "Trình duyệt của bạn không hỗ trợ nhận diện giọng nói (Khuyên dùng Chrome/Edge).";
+            const transcriptDiv = document.getElementById('voice-transcript');
+            if (transcriptDiv) transcriptDiv.innerText = "Trình duyệt không hỗ trợ nhận diện giọng nói (Khuyên dùng Chrome/Edge).";
+            const topVoiceStatus = document.getElementById('top-voice-status');
+            if (topVoiceStatus) topVoiceStatus.innerText = "Không hỗ trợ";
         }
 
         // -----------------------------------------------------
@@ -1235,6 +1797,14 @@
                 .catch(e => console.error(e));
         }
 
+        // Đăng ký ServiceWorker cho Progressive Web App (PWA)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(reg => {
+                console.log('ServiceWorker registered:', reg);
+            }).catch(err => {
+                console.log('ServiceWorker registration error:', err);
+            });
+        }
     </script>
 
     <!-- MODAL: FLEET MANAGEMENT -->

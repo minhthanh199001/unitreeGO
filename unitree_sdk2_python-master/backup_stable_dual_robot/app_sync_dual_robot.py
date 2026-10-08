@@ -3,6 +3,7 @@ import os
 import time
 import math
 import random
+import socket
 import json
 import asyncio
 from typing import Optional, List, Dict, Any
@@ -44,6 +45,11 @@ DEFAULT_ROBOTS = [
     },
 ]
 
+KNOWN_DEFAULT_KEYS = {
+    "192.168.0.41": "d15cda4ffb907236f7e363e77dfab121",
+    "192.168.12.1": "d15cda4ffb907236f7e363e77dfab121",
+}
+
 # Quản lý cấu hình danh sách Robot
 ROBOTS: Dict[str, Dict[str, Any]] = {}
 robot_monitor_tasks: Dict[str, asyncio.Task] = {}
@@ -65,12 +71,22 @@ def load_robots_config():
 
     for item in data:
         r_id = item["id"]
+        ip = item.get("ip", "").strip()
+        key = item.get("key")
+        fallback_ip = item.get("fallback_ip")
+        
+        # Tự động bù Key và Fallback AP nếu robot là IP quen thuộc
+        if not key and ip in KNOWN_DEFAULT_KEYS:
+            key = KNOWN_DEFAULT_KEYS[ip]
+        if not fallback_ip and ip == "192.168.0.41":
+            fallback_ip = "192.168.12.1"
+
         ROBOTS[r_id] = {
             "id": r_id,
             "name": item.get("name", f"Robot {r_id}"),
-            "ip": item["ip"],
-            "fallback_ip": item.get("fallback_ip"),
-            "key": item.get("key"),
+            "ip": ip,
+            "fallback_ip": fallback_ip,
+            "key": key,
             "enabled": item.get("enabled", True),
             "conn": None,
             "connected": False,
@@ -329,13 +345,15 @@ async def add_robot(robot_in: RobotCreate):
     # Tạo ID duy nhất
     clean_ip = robot_in.ip.split(".")[-1]
     new_id = f"robot_{clean_ip}_{int(time.time()) % 1000}"
-    key = robot_in.key.strip() if robot_in.key and robot_in.key.strip() else None
+    ip = robot_in.ip.strip()
+    key = robot_in.key.strip() if robot_in.key and robot_in.key.strip() else KNOWN_DEFAULT_KEYS.get(ip)
+    fallback_ip = robot_in.fallback_ip.strip() if robot_in.fallback_ip and robot_in.fallback_ip.strip() else ("192.168.12.1" if ip == "192.168.0.41" else None)
 
     ROBOTS[new_id] = {
         "id": new_id,
         "name": robot_in.name.strip(),
-        "ip": robot_in.ip.strip(),
-        "fallback_ip": robot_in.fallback_ip.strip() if robot_in.fallback_ip and robot_in.fallback_ip.strip() else None,
+        "ip": ip,
+        "fallback_ip": fallback_ip,
         "key": key,
         "enabled": robot_in.enabled,
         "conn": None,
@@ -345,7 +363,7 @@ async def add_robot(robot_in: RobotCreate):
     if robot_in.enabled:
         start_robot_task(new_id)
 
-    print(f"➕ ĐÃ THÊM ROBOT MỚI: {robot_in.name} ({robot_in.ip}) [ID: {new_id}]", flush=True)
+    print(f"➕ ĐÃ THÊM ROBOT MỚI: {robot_in.name} ({ip}) [ID: {new_id}, Key: {'Đã cài' if key else 'Không'}]", flush=True)
     return {"status": "ok", "id": new_id, "robot": ROBOTS[new_id]}
 
 @app.delete("/api/robots/{robot_id}")
@@ -380,6 +398,27 @@ async def toggle_robot(robot_id: str):
         await stop_robot_task(robot_id)
 
     return {"status": "ok", "enabled": r["enabled"]}
+
+SSL_CERT = os.path.join(os.path.dirname(__file__), "cert.pem")
+SSL_KEY = os.path.join(os.path.dirname(__file__), "key.pem")
+USE_SSL = os.path.exists(SSL_CERT) and os.path.exists(SSL_KEY)
+
+def get_server_lan_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+@app.get("/api/lan_ip")
+async def get_lan_ip():
+    ip = get_server_lan_ip()
+    scheme = "https" if USE_SSL else "http"
+    return {"ip": ip, "port": 8080, "url": f"{scheme}://{ip}:8080"}
 
 @app.on_event("startup")
 async def startup_event():
@@ -488,10 +527,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     "greet": SPORT_CMD.get("Hello", 1016),
                     "pounce": SPORT_CMD.get("FrontPounce", 1032),
                     "jump_forward": SPORT_CMD.get("FrontJump", 1031),
+                    "bound": SPORT_CMD.get("Bound", 1304),
+                    "front_flip": SPORT_CMD.get("FrontFlip", 1030),
+                    "back_flip": SPORT_CMD.get("BackFlip", 1044),
+                    "left_flip": SPORT_CMD.get("LeftFlip", 1042),
+                    "right_flip": SPORT_CMD.get("RightFlip", 1043),
+                    "handstand": SPORT_CMD.get("Handstand", 1301),
+                    "cross_step": SPORT_CMD.get("CrossStep", 1302),
+                    "onesided_step": SPORT_CMD.get("OnesidedStep", 1303),
                     "heart": SPORT_CMD.get("FingerHeart", 1036),
                     "wiggle_hips": SPORT_CMD.get("WiggleHips", 1033),
                     "scrape": SPORT_CMD.get("Scrape", 1029),
-                    "front_flip": SPORT_CMD.get("FrontFlip", 1030),
                     "moonwalk": SPORT_CMD.get("MoonWalk", 1305),
                 }
 
@@ -527,4 +573,13 @@ async def websocket_endpoint(websocket: WebSocket):
 app.mount("/", StaticFiles(directory="www", html=True), name="static")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    if USE_SSL:
+        print("==================================================", flush=True)
+        print("🔒 KHỞI CHẠY GIAO THỨC BẢO MẬT HTTPS: https://0.0.0.0:8080", flush=True)
+        print("==================================================", flush=True)
+        uvicorn.run(app, host="0.0.0.0", port=8080, ssl_keyfile=SSL_KEY, ssl_certfile=SSL_CERT)
+    else:
+        print("==================================================", flush=True)
+        print("🌐 KHỞI CHẠY GIAO THỨC HTTP: http://0.0.0.0:8080", flush=True)
+        print("==================================================", flush=True)
+        uvicorn.run(app, host="0.0.0.0", port=8080)

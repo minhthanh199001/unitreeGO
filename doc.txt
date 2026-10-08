@@ -1,0 +1,45 @@
+Go2 will only connect to cloud services after user authorization.
+
+Cloud Services
+Cloud services mainly have several functions:
+
+Collect Go2 operation data (not involving privacy) for fault detection and statistics.
+
+Assist users in remote operations, mainly through WebRTC. Image and control traffic can be forwarded point-to-point or through a turn server, and the server will not collect or analyze these traffic.
+
+System upgrade iteration.
+
+Communication for cloud services:
+
+mqtt is used to establish IoT communication with each robot dog, responsible for monitoring faults, system upgrades, and transmitting WebRTC signaling.
+
+Connect the app and web front-end using HTTP services to establish a binding relationship between users and dogs.
+
+The turn/run server is used to assist in WebRTC peer-to-peer connections and provide server data forwarding when peer-to-peer connections cannot be achieved.
+
+Go2
+The OTA module communicates with the cloud server through mqtt, responsible for uploading fault information, system upgrades, and forwarding WebRTC signaling.
+
+The WebRTC module implements the main data pipeline with the app, including audio and video streams, radar point clouds, motion status, and control commands.
+
+The Bluetooth (BLE) section is used to establish contact with the app, mainly for configuring the network and verifying security.
+
+The communication between various functional modules is mainly achieved through DDS. The DDS IDL is compatible with ROS2 (an adaptive RMW needs to be selected), and the EDU version can call the interface through DDS or ROS2.
+
+Sensor data such as motor, radar, UWB, etc. are collected through serial ports and forwarded to the DDS intermediate layer.
+
+EDU and above multimedia modules are designed for secondary development and support GST streaming.
+
+App
+User management module, connected to the Unitree Robocits management platform through HTTP web API. Responsible for binding dog, WebRTC connection, and other functions.
+
+The Bluetooth module of Go2 is used to configure the network.
+
+The WebRTC module mainly implements data traffic through WebRTC, including image transmission, point cloud, motion status, and control command issuance.
+
+Development Interface
+DDS, supports C++and Python.
+
+ROS2 interface.
+
+GST, only for image transmission.

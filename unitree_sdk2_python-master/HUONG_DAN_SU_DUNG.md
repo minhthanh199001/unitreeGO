@@ -50,9 +50,10 @@ Bạn cũng có thể mở file [`robots_config.json`](file:///d:/THANH/unitreeg
    ```text
    CHAY_ROBOT_DONG_BO.bat
    ```
-3. Mở trình duyệt web truy cập:
-   - Trên máy tính này: [http://localhost:8080](http://localhost:8080)
-   - Thiết bị cùng mạng Wi-Fi: [http://192.168.0.153:8080](http://192.168.0.153:8080)
+3. Mở trình duyệt web truy cập (giao thức bảo mật HTTPS):
+   - Trên máy tính này: [https://localhost:8080](https://localhost:8080)
+   - Thiết bị điện thoại cùng Wi-Fi: [https://192.168.0.153:8080](https://192.168.0.153:8080)
+   *(Lưu ý: Khi trình duyệt hỏi cảnh báo chứng chỉ tự ký lần đầu, bấm **Nâng cao** ➔ **Tiếp tục truy cập**)*
 
 ---
 
